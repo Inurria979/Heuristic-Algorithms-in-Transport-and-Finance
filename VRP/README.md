@@ -16,8 +16,8 @@ s.t. every customer on exactly one route,
 the VRP, tests it on the benchmark instances and compares the results with Table 1 of
 Juan et al. (2011), with the code as an appendix.
 
-> **State: in progress.** The **sequential** CWS is implemented and run on the 33
-> instances. Next: the **parallel** CWS (the version used in the paper), then the article.
+> **State: in progress.** The **sequential** and **parallel** CWS are implemented and run
+> on the 33 instances. Next: the article.
 
 ## Scope relative to the paper
 
@@ -29,7 +29,7 @@ procedure of the paper (Figure 4):
 | Figure 4 | Step of SR-GCWS-CS | Here |
 |---|---|---|
 | line 1 | `makeSavingsList` — sorted savings list | yes, `make_savings_list` |
-| line 2 | `constructCWSSol` — classic CWS, parallel version (column `CWS Sol.` of Table 1) | sequential version done; parallel version next |
+| line 2 | `constructCWSSol` — classic CWS, parallel version (column `CWS Sol.` of Table 1) | yes, `parallel_cws`; plus a `sequential_cws` variant |
 | lines 3–4, 8 | multi-start loop of `constructRandomSol`: CWS with the edge chosen at random by a geometric distribution (Figures 5–6) | no |
 | line 5 | `improveSolUsingRoutesCache` — hash table with the best order of every route (Figure 7) | no |
 | lines 6–7 | `improveSolUsingSplitting` — solve sub-problems on regions of the plane (Figures 3, 8) | no |
@@ -53,47 +53,55 @@ Clarke & Wright savings heuristic:
 
 The **sequential** version grows one route at a time: the first feasible edge of the list
 seeds a route, which is then extended with the first feasible edge touching it until none
-is left; the route is closed and the next one is started. The **parallel** version (to do)
-lets any two routes merge at any moment in a single pass over the list.
+is left; the route is closed and the next one is started. The **parallel** version, the
+one used in the paper, walks the list once and merges **any two routes** whenever the
+conditions hold, so all routes grow at the same time.
 
-## Results — sequential CWS
+Ties in the savings list keep the generation order `(i, j)`, as in the course code.
+
+## Results
 
 Mean gap per family (`gap = 100 · (cost − ref) / ref`) against the CWS cost reported by
-Juan et al. (parallel version) and against the best-known solution (BKS, real distances).
-Full table in [`results/sequential_cws.csv`](results/sequential_cws.csv).
+Juan et al. (JORS, Table 1) and against the best-known solution (BKS, real distances).
+Full tables in [`results/cws_comparison.csv`](results/cws_comparison.csv) (both versions)
+and [`results/sequential_cws.csv`](results/sequential_cws.csv).
 
-| Family | Instances | Gap vs. paper CWS (%) | Gap vs. BKS (%) |
-|---|---|---|---|
-| A | 8 | 10.10 | 15.55 |
-| B | 4 | 10.27 | 12.59 |
-| E | 7 | 11.70 | 17.19 |
-| F | 3 | 29.23 | 33.08 |
-| M | 2 | 16.84 | 19.11 |
-| P | 9 | 6.48 | 14.15 |
-| **All** | **33** | **11.62** | **16.97** |
+| Family | Instances | Sequential vs. JORS CWS (%) | Parallel vs. JORS CWS (%) | Parallel vs. BKS (%) |
+|---|---|---|---|---|
+| A | 8 | 10.10 | 0.00 | 4.98 |
+| B | 4 | 10.27 | 0.00 | 2.12 |
+| E | 7 | 11.70 | −0.13 | 4.81 |
+| F | 3 | 29.23 | 0.00 | 3.04 |
+| M | 2 | 16.84 | 0.00 | 1.93 |
+| P | 9 | 6.48 | 0.24 | 7.46 |
+| **All** | **33** | **11.62** | **0.04** | **4.91** |
 
-Every solution is feasible and takes milliseconds (under 80 ms for the largest instance).
-The sequential version is clearly worse than the parallel one used in the paper: its last
-routes are built from the customers that are left over, often scattered or even alone
-(route 5 of `A-n32-k5` serves a single customer). The clustered Fisher instances (`F`)
-suffer most.
+* Both versions return feasible solutions in milliseconds (under 80 ms for the largest
+  instance).
+* The **parallel** CWS reproduces the JORS cost in 27 of 33 instances. The other six
+  (`E-n76-k7/k10/k14`, `P-n50-k10`, `P-n76-k4/k5`) differ by −1.8 % to +1.6 % only because
+  of how tied savings are ordered: taking tied edges in reverse generation order reproduces
+  all 33 (experiment in the notebook, section 8).
+* The **sequential** CWS is about 10 % worse than the parallel one: its last routes are
+  built from the customers that are left over, often scattered or even alone (route 5 of
+  `A-n32-k5` serves a single customer). The clustered Fisher instances (`F`) suffer most.
 
-![Gap per instance](results/figures/sequential_cws_gap.png)
+![Gap per instance](results/figures/cws_gap_comparison.png)
 
 ## Files
 
 | Path | Contents |
 |---|---|
-| [`src/vrp.py`](src/vrp.py) | CWS building blocks and the sequential CWS; `CAPACITY` of every instance |
-| [`src/vrp.ipynb`](src/vrp.ipynb) | Notebook — every step explained on `A-n32-k5`, then the 33 instances |
+| [`src/vrp.py`](src/vrp.py) | CWS building blocks, `sequential_cws` and `parallel_cws`; `CAPACITY` of every instance |
+| [`src/vrp.ipynb`](src/vrp.ipynb) | Notebook — every step explained on `A-n32-k5`, both versions on the 33 instances, comparison with JORS |
 | [`data/`](data/) | 33 benchmark instances, one text file per instance |
 | [`docs/`](docs/) | Course slides and the paper by Juan et al. (2011) |
-| [`results/`](results/) | `sequential_cws.csv` and `figures/` |
+| [`results/`](results/) | `sequential_cws.csv`, `cws_comparison.csv` and `figures/` |
 | `ignore/` (git-ignored) | Local material that is not uploaded |
 
 Functions in `vrp.py`: `load_instance`, `distance_matrix`, `make_savings_list`,
 `construct_initial_sol`, `is_exterior`, `check_merging_conditions`,
-`merge_routes_using_edge`, `sequential_cws`, `route_cost`, `solution_cost`, `is_feasible`.
+`merge_routes_using_edge`, `sequential_cws`, `parallel_cws`, `route_cost`, `solution_cost`, `is_feasible`.
 
 ## Instances
 
@@ -133,7 +141,7 @@ Requires [uv](https://docs.astral.sh/uv/) only; it fetches Python 3.14 itself.
 
 ```bash
 uv sync                  # numpy, pandas, matplotlib (+ ipykernel)
-uv run python src/vrp.py # sequential CWS on the 33 instances: routes and cost
+uv run python src/vrp.py # both CWS versions on the 33 instances: routes and cost
 uv run --with nbconvert jupyter nbconvert --to notebook --execute --inplace src/vrp.ipynb
 ```
 

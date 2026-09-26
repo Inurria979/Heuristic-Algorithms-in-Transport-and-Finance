@@ -124,6 +124,21 @@ def sequential_cws(dist, demand, capacity):
     return list(routes.values())
 
 
+def parallel_cws(dist, demand, capacity):
+    """Parallel CWS: one pass over the savings list, any two routes may be merged.
+
+    This is the classic CWS used by Juan et al. (2011, Figure 4 line 2): all routes grow
+    at the same time, and every edge of the list is tried once, in order of decreasing
+    saving, merging the routes of its two nodes if the conditions hold. A discarded edge is
+    never tried again, since its conditions can only get worse as routes grow.
+    """
+    i_list, j_list, _ = make_savings_list(dist)
+    routes, route_of, load = construct_initial_sol(demand)
+    for i, j in zip(i_list, j_list):
+        if check_merging_conditions(i, j, routes, route_of, load, capacity):
+            merge_routes_using_edge(i, j, routes, route_of, load)
+    return list(routes.values())
+
 def route_cost(route, dist):
     """Length of the closed tour depot -> route -> depot."""
     tour = [0, *route, 0]
@@ -146,6 +161,8 @@ if __name__ == "__main__":
     for name in CAPACITY:
         coords, demand, capacity = load_instance(name)
         dist = distance_matrix(coords)
-        routes = sequential_cws(dist, demand, capacity)
-        assert is_feasible(routes, demand, capacity)
-        print(f"{name:12s} routes={len(routes):3d} cost={solution_cost(routes, dist):9.2f}")
+        seq = sequential_cws(dist, demand, capacity)
+        par = parallel_cws(dist, demand, capacity)
+        assert is_feasible(seq, demand, capacity) and is_feasible(par, demand, capacity)
+        print(f"{name:12s} sequential: {len(seq):3d} routes {solution_cost(seq, dist):9.2f}"
+              f" | parallel: {len(par):3d} routes {solution_cost(par, dist):9.2f}")
