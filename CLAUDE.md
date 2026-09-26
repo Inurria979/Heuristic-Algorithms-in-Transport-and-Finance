@@ -9,7 +9,7 @@ resultados, y puede tener su propio `CLAUDE.md` (hoy solo `POP/`), que manda sob
 |---|---|---|
 | `POP/` | Portfolio Optimization (Markowitz + OSQP, OR-Library port1–5) | Terminado |
 | `TSP/` | Travelling Salesman (vecino más próximo y greedy edge, TSPLIB) | Código terminado |
-| `VRP/` | Capacitated Vehicle Routing (33 instancias A/B/E/F/M/P) | En curso, solo andamiaje |
+| `VRP/` | Capacitated Vehicle Routing, heurística de ahorros de Clarke & Wright (33 instancias A/B/E/F/M/P) | En curso: CWS secuencial hecho, falta paralelo y artículo |
 | `DTOP/` | Dynamic Team Orienteering (Transformers + RL) | Terminado, sin código (presentación en clase) |
 
 ## Estructura obligatoria de cada subproyecto

@@ -11,7 +11,7 @@ pinned Python version and its own `.venv`.
 |---|---|---|---|
 | [`POP/`](POP/) | **Portfolio Optimization Problem.** Basic Markowitz mean–variance model solved as a quadratic program with [OSQP](https://osqp.org); unconstrained efficient frontier of the OR-Library instances `port1`–`port5` compared point by point with the reference frontiers `portef1`–`portef5`. | Finished | [`src/markowitz_osqp.ipynb`](POP/src/markowitz_osqp.ipynb) + 3-page tutorial article in `docs/` (`.tex` and PDF) |
 | [`TSP/`](TSP/) | **Travelling Salesman Problem.** Two constructive heuristics without local search — nearest neighbour and greedy edge (*multi-fragment*) — run over the 111 TSPLIB instances and measured against the 32 known optimal tours. | Code finished | [`src/tsp_greedy_en.ipynb`](TSP/src/tsp_greedy_en.ipynb) |
-| [`VRP/`](VRP/) | **Capacitated Vehicle Routing Problem** on 33 classic benchmark instances (Augerat A/B/P, Christofides E/M, Fisher F). | In progress — data in place, code still scaffolding | [`src/vrp.ipynb`](VRP/src/vrp.ipynb) |
+| [`VRP/`](VRP/) | **Capacitated Vehicle Routing Problem** with the Clarke & Wright savings heuristic on 33 classic benchmark instances (Augerat A/B/P, Christofides E/M, Fisher F), compared with Table 1 of Juan et al. (2011). | In progress — sequential CWS done, parallel CWS and article pending | [`src/vrp.ipynb`](VRP/src/vrp.ipynb) + 3-page article in `docs/` (to do) |
 | [`DTOP/`](DTOP/) | **Dynamic Team Orienteering Problem** approached with Transformers + reinforcement learning. No code: the activity was a presentation in class. | Finished | Class presentation, reference papers |
 
 Each folder has its own `README.md` with the model, the method and the results.
@@ -62,7 +62,8 @@ Heuristic-Algorithms-in-Transport-and-Finance/
 │   ├── .python-version, pyproject.toml, uv.lock, .venv/
 │   ├── src/                vrp.py, vrp.ipynb
 │   ├── data/               33 instances, one file per instance
-│   ├── docs/, results/     empty for now
+│   ├── docs/               course slides, Juan et al. (2011) paper
+│   ├── results/            sequential_cws.csv, figures/
 │   └── ignore/
 │
 └── DTOP/
