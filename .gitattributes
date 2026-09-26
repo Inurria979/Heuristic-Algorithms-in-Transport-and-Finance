@@ -1,0 +1,12 @@
+# Normaliza los finales de línea en el repositorio (LF) y los deja nativos en
+# el árbol de trabajo. Evita diffs espurios entre Windows y Linux.
+* text=auto
+
+# Binarios: nunca se normalizan ni se intenta hacer diff de texto sobre ellos.
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.zip  binary
+*.gz   binary
+*.xlsx binary
