@@ -21,32 +21,15 @@ has to re-decide on the fly instead of solving one static instance offline. The 
 studied here encodes the state with a Transformer and trains the routing policy with
 reinforcement learning.
 
-> **State: not started.** This folder only holds the reference paper. The uv environment is
-> already in place, so the code can be started right away.
+> **State: finished.** This project contains **no code**: the activity consisted only of a
+> presentation in class on the reference papers below.
 
 ## Files
 
 | Path | Contents |
 |---|---|
 | `Guerrero 2025 - Using Transformers and RL for the TOP Under Dynamic Conditions.pdf` | Reference paper |
-| `Transformers + RL for the Dynamic Team Orienteering Problem.pdf` | Reference document for the activity |
+| `Transformers + RL for the Dynamic Team Orienteering Problem.pdf` | Slides of the class presentation |
 
-## Usage
-
-Requires [uv](https://docs.astral.sh/uv/) only; it fetches Python 3.14 itself.
-
-```bash
-uv sync    # numpy, matplotlib (+ ipykernel)
-```
-
-The environment is intentionally minimal. Add the deep-learning stack when the
-implementation starts, for example:
-
-```bash
-uv add torch gymnasium
-```
-
-If the wheels for the chosen framework do not yet cover Python 3.14, lower the pin in
-`.python-version` and the `requires-python` field of `pyproject.toml` for this project
-only — every folder in the repository resolves independently, so it will not affect the
-others.
+`pyproject.toml`, `uv.lock` and `.python-version` are left over from the initial setup of the
+repository; they are not needed, since there is nothing to run.

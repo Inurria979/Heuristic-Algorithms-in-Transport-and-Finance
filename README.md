@@ -12,7 +12,7 @@ pinned Python version and its own `.venv`.
 | [`POP/`](POP/) | **Portfolio Optimization Problem.** Basic Markowitz mean–variance model solved as a quadratic program with [OSQP](https://osqp.org); unconstrained efficient frontier of the OR-Library instances `port1`–`port5` compared point by point with the reference frontiers `portef1`–`portef5`. | Finished | [`src/markowitz_osqp.ipynb`](POP/src/markowitz_osqp.ipynb) + 3-page tutorial article in `docs/` (`.tex` and PDF) |
 | [`TSP/`](TSP/) | **Travelling Salesman Problem.** Two constructive heuristics without local search — nearest neighbour and greedy edge (*multi-fragment*) — run over the 111 TSPLIB instances and measured against the 32 known optimal tours. | Code finished | [`src/tsp_greedy_en.ipynb`](TSP/src/tsp_greedy_en.ipynb) |
 | [`VRP/`](VRP/) | **Capacitated Vehicle Routing Problem** on 33 classic benchmark instances (Augerat A/B/P, Christofides E/M, Fisher F). | In progress — data in place, code still scaffolding | [`src/vrp.ipynb`](VRP/src/vrp.ipynb) |
-| [`DTOP/`](DTOP/) | **Dynamic Team Orienteering Problem** approached with Transformers + reinforcement learning. | Not started — reference papers only | — |
+| [`DTOP/`](DTOP/) | **Dynamic Team Orienteering Problem** approached with Transformers + reinforcement learning. No code: the activity was a presentation in class. | Finished | Class presentation, reference papers |
 
 Each folder has its own `README.md` with the model, the method and the results.
 
@@ -28,7 +28,8 @@ Every code project (`POP/`, `TSP/`, `VRP/`) follows the same structure:
 | `results/` | generated outputs: CSVs and figures | yes |
 | `ignore/` | anything that must not be uploaded: original downloads, zips, archived scripts | no |
 
-`DTOP/` is the exception: for now it only holds papers and slides, so it has no subfolders.
+`DTOP/` is the exception: it contains no code — the activity was only a presentation in class —
+so it just holds the papers and slides, with no subfolders.
 
 ```
 Heuristic-Algorithms-in-Transport-and-Finance/
@@ -66,7 +67,7 @@ Heuristic-Algorithms-in-Transport-and-Finance/
 │
 └── DTOP/
     ├── .python-version, pyproject.toml, uv.lock, .venv/
-    └── *.pdf                the reference papers
+    └── *.pdf                reference papers and the class presentation (no code)
 ```
 
 Notebooks run with `src/` as their working directory, so they read `../data/` and write
@@ -74,9 +75,9 @@ to `../results/`.
 
 ## Environments
 
-All four projects pin **Python 3.14** and are managed with **uv**. They are deliberately
+All projects pin **Python 3.14** and are managed with **uv**. They are deliberately
 *independent*: there is no `pyproject.toml` at the repository root and **no uv workspace**,
-so every folder resolves and locks its own dependencies and the four `.venv` can never
+so every folder resolves and locks its own dependencies and their `.venv` can never
 interfere with one another.
 
 The only prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/) —
@@ -101,7 +102,7 @@ Everyday commands, all of them run from inside a project folder:
 | `uv tree` | show the resolved dependency tree |
 
 **Notebooks.** Open the project folder in VS Code or Jupyter and select the `.venv` of
-*that* folder as the kernel; `ipykernel` is in the `dev` group of all four projects, which
+*that* folder as the kernel; `ipykernel` is in the `dev` group of every project, which
 `uv sync` installs by default. To run a notebook without a UI:
 
 ```bash

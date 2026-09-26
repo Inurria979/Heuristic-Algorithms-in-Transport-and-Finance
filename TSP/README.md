@@ -21,7 +21,7 @@ s.t. Σ_{j≠i} x_ij = 1,  Σ_{i≠j} x_ij = 1,
 |---|---|
 | [`src/tsp_greedy_en.ipynb`](src/tsp_greedy_en.ipynb) | **Main deliverable**: TSPLIB parser → candidate neighbours → both heuristics → run over the 111 instances → gaps, times and plots |
 | [`data/`](data/) | 111 TSPLIB instances (`*.tsp`) and the 32 known optimal tours (`*.opt.tour`) |
-| [`docs/`](docs/) | Course slides |
+| [`docs/`](docs/) | Course slides, our write-up `TSP_heuristic.pdf` and presentation `tsp-greedy-heuristics.pptx` |
 | [`results/resultados.csv`](results/resultados.csv) | One row per instance: `n`, `tipo`, `optimo`, and length / gap / time for each heuristic |
 | [`results/figures/`](results/figures/) | `results.{png,pdf}` (gaps and times over the 111 instances) and `eil51_tours.{png,pdf}` (the two tours of `eil51`) |
 | `ignore/` (git-ignored) | Local material that is not uploaded |

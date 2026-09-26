@@ -10,7 +10,7 @@ resultados, y puede tener su propio `CLAUDE.md` (hoy solo `POP/`), que manda sob
 | `POP/` | Portfolio Optimization (Markowitz + OSQP, OR-Library port1–5) | Terminado |
 | `TSP/` | Travelling Salesman (vecino más próximo y greedy edge, TSPLIB) | Código terminado |
 | `VRP/` | Capacitated Vehicle Routing (33 instancias A/B/E/F/M/P) | En curso, solo andamiaje |
-| `DTOP/` | Dynamic Team Orienteering (Transformers + RL) | Sin empezar, solo papers |
+| `DTOP/` | Dynamic Team Orienteering (Transformers + RL) | Terminado, sin código (presentación en clase) |
 
 ## Estructura obligatoria de cada subproyecto
 
@@ -28,8 +28,10 @@ En la raíz de cada subproyecto solo quedan `README.md`, `CLAUDE.md` (opcional),
 `pyproject.toml`, `uv.lock` y `.python-version`. No dejes ficheros sueltos: colócalos en
 una de las cinco carpetas y, si no está claro cuál, pregunta.
 
-`DTOP/` es la excepción: de momento solo contiene papers y transparencias en su raíz. Cuando
-empiece el código, pasa a la estructura anterior.
+`DTOP/` es la excepción: **no contiene código y está terminado**. La actividad consistía
+solo en hacer una presentación en clase, así que la carpeta guarda únicamente los papers y
+las transparencias en su raíz, sin subcarpetas. No crees código ni la estructura anterior
+en `DTOP/` salvo que se pida expresamente.
 
 ## Rutas en el código
 
