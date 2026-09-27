@@ -16,8 +16,22 @@ s.t. every customer on exactly one route,
 the VRP, tests it on the benchmark instances and compares the results with Table 1 of
 Juan et al. (2011), with the code as an appendix.
 
-> **State: in progress.** The **sequential** and **parallel** CWS are implemented and run
-> on the 33 instances. Next: the article.
+> **State: finished.** Sequential and parallel CWS in Python (the parallel one also in
+> C++), run on the 33 instances and compared with Juan et al. (2011); 3-page article and
+> class presentation delivered.
+
+## Deliverables
+
+By Jesús Inurria Porrero and Javier Salvatierra Corchado, September 2026.
+
+| Deliverable | File |
+|---|---|
+| 3-page article, with the code as appendix | [`docs/Javier S Jesus I Vehicle Routing Problem.pdf`](docs/Javier%20S%20Jesus%20I%20Vehicle%20Routing%20Problem.pdf) — LaTeX source [`docs/Vehicle Routing Problem.tex`](docs/Vehicle%20Routing%20Problem.tex) |
+| Class presentation (10 slides) | [`docs/Presentation Clarke & Wright savings heuristic for the CVRP.pdf`](docs/Presentation%20Clarke%20%26%20Wright%20savings%20heuristic%20for%20the%20CVRP.pdf) |
+| Code and experiments | [`src/vrp.py`](src/vrp.py), [`src/vrp.ipynb`](src/vrp.ipynb), [`src/cpp/cws.cpp`](src/cpp/cws.cpp) |
+
+The article takes its figures from `results/figures/` (`\graphicspath{{../results/figures/}}`),
+so it compiles from inside `docs/`.
 
 ## Scope relative to the paper
 
@@ -76,8 +90,9 @@ and [`results/sequential_cws.csv`](results/sequential_cws.csv).
 | P | 9 | 6.48 | 0.24 | 7.46 |
 | **All** | **33** | **11.62** | **0.04** | **4.91** |
 
-* Both versions return feasible solutions in milliseconds (under 80 ms for the largest
-  instance).
+* Both versions return feasible solutions in milliseconds: 15.1 ms (sequential) and
+  4.4 ms (parallel) per instance on average in Python, under 80 ms for the largest one.
+  The C++ port of the parallel CWS gives the same 33 solutions in 13 µs–1.4 ms.
 * The **parallel** CWS reproduces the JORS cost in 27 of 33 instances. The other six
   (`E-n76-k7/k10/k14`, `P-n50-k10`, `P-n76-k4/k5`) differ by −1.8 % to +1.6 % only because
   of how tied savings are ordered: taking tied edges in reverse generation order reproduces
@@ -96,8 +111,8 @@ and [`results/sequential_cws.csv`](results/sequential_cws.csv).
 | [`src/vrp.ipynb`](src/vrp.ipynb) | Notebook — every step explained on `A-n32-k5`, both versions on the 33 instances, comparison with JORS |
 | [`src/cpp/cws.cpp`](src/cpp/cws.cpp) | C++ port of the parallel CWS, function by function; same solutions as `vrp.parallel_cws` |
 | [`data/`](data/) | 33 benchmark instances, one text file per instance |
-| [`docs/`](docs/) | Course slides and the paper by Juan et al. (2011) |
-| [`results/`](results/) | `sequential_cws.csv`, `cws_comparison.csv` and `figures/` |
+| [`docs/`](docs/) | Course slides, the paper by Juan et al. (2011), our article (`.tex` + PDF) and presentation |
+| [`results/`](results/) | `sequential_cws.csv`, `cws_comparison.csv` (both versions vs. JORS), `cws_cpp.csv` (C++ run) and `figures/` |
 | `ignore/` (git-ignored) | Local material that is not uploaded |
 
 Functions in `vrp.py`: `load_instance`, `distance_matrix`, `make_savings_list`,
@@ -159,7 +174,8 @@ git-ignored `ignore/bin/`.
 
 ```bash
 mkdir -p ignore/bin
-uv run python -m ziglang c++ -std=c++20 -O2 -ffp-contract=off -Wno-nullability-completeness     src/cpp/cws.cpp -o ignore/bin/cws.exe
+uv run python -m ziglang c++ -std=c++20 -O2 -ffp-contract=off -Wno-nullability-completeness \
+    src/cpp/cws.cpp -o ignore/bin/cws.exe
 ignore/bin/cws.exe data results/cws_cpp.csv   # routes, cost and mean time per instance
 ```
 
@@ -169,9 +185,9 @@ ignore/bin/cws.exe data results/cws_cpp.csv   # routes, cost and mean time per i
 * `-Wno-nullability-completeness` silences warnings raised by Zig's own libc++ headers.
 * The first build takes a couple of minutes because Zig compiles and caches its libc++;
   later builds take a few seconds.
-* One run of the parallel CWS takes from ~10 µs to ~1 ms in C++ depending on the size of
-  the instance, about 30 times faster than Python (15–65×; both are already fast enough
-  for this assignment). Timings depend on the machine and vary slightly between runs.
+* One run of the parallel CWS takes 13 µs–1.4 ms in C++ depending on the size of the
+  instance, about 30 times faster than Python (15–65×; both are already fast enough for
+  this assignment). Timings depend on the machine and vary slightly between runs.
 
 ## References
 
