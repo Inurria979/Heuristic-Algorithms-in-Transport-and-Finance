@@ -94,6 +94,7 @@ and [`results/sequential_cws.csv`](results/sequential_cws.csv).
 |---|---|
 | [`src/vrp.py`](src/vrp.py) | CWS building blocks, `sequential_cws` and `parallel_cws`; `CAPACITY` of every instance |
 | [`src/vrp.ipynb`](src/vrp.ipynb) | Notebook — every step explained on `A-n32-k5`, both versions on the 33 instances, comparison with JORS |
+| [`src/cpp/cws.cpp`](src/cpp/cws.cpp) | C++ port of the parallel CWS, function by function; same solutions as `vrp.parallel_cws` |
 | [`data/`](data/) | 33 benchmark instances, one text file per instance |
 | [`docs/`](docs/) | Course slides and the paper by Juan et al. (2011) |
 | [`results/`](results/) | `sequential_cws.csv`, `cws_comparison.csv` and `figures/` |
@@ -140,13 +141,37 @@ x   y   demand
 Requires [uv](https://docs.astral.sh/uv/) only; it fetches Python 3.14 itself.
 
 ```bash
-uv sync                  # numpy, pandas, matplotlib (+ ipykernel)
+uv sync                  # numpy, pandas, matplotlib (+ ipykernel, ziglang)
 uv run python src/vrp.py # both CWS versions on the 33 instances: routes and cost
 uv run --with nbconvert jupyter nbconvert --to notebook --execute --inplace src/vrp.ipynb
 ```
 
 Or open `src/vrp.ipynb` and select this folder's `.venv` as the kernel. The notebook runs
 in a few seconds.
+
+### C++ version
+
+`src/cpp/cws.cpp` is compiled with [Zig](https://ziglang.org), whose `zig c++` is a
+Clang/LLVM compiler bundled with its own C/C++ standard libraries. It is installed from PyPI
+as the dev dependency `ziglang`, so `uv sync` provides it inside `.venv` — no Visual Studio
+or system compiler is needed. The executable is a build artefact and goes to the
+git-ignored `ignore/bin/`.
+
+```bash
+mkdir -p ignore/bin
+uv run python -m ziglang c++ -std=c++20 -O2 -ffp-contract=off -Wno-nullability-completeness     src/cpp/cws.cpp -o ignore/bin/cws.exe
+ignore/bin/cws.exe data results/cws_cpp.csv   # routes, cost and mean time per instance
+```
+
+* `-ffp-contract=off` forbids fused multiply-add, so every floating-point operation is the
+  same as in numpy: savings, tie order and costs match the Python version bit for bit.
+  The 33 solutions are identical to `vrp.parallel_cws`.
+* `-Wno-nullability-completeness` silences warnings raised by Zig's own libc++ headers.
+* The first build takes a couple of minutes because Zig compiles and caches its libc++;
+  later builds take a few seconds.
+* One run of the parallel CWS takes from ~10 µs to ~1 ms in C++ depending on the size of
+  the instance, about 30 times faster than Python (15–65×; both are already fast enough
+  for this assignment). Timings depend on the machine and vary slightly between runs.
 
 ## References
 

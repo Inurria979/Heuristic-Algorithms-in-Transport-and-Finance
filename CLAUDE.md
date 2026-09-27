@@ -16,7 +16,8 @@ resultados, y puede tener su propio `CLAUDE.md` (hoy solo `POP/`), que manda sob
 
 Todo subproyecto con código (`POP/`, `TSP/`, `VRP/` y los que se añadan) tiene estas carpetas:
 
-- `src/` — código: notebooks y módulos `.py`. Nada más.
+- `src/` — código: notebooks y módulos `.py`. Nada más, salvo `src/cpp/` en `VRP/`
+  (fuentes C++; se compilan con Zig instalado vía uv y el ejecutable va a `ignore/bin/`).
 - `data/` — instancias del problema (benchmarks, soluciones de referencia), sin modificar.
 - `docs/` — PDFs del profesor (transparencias, enunciados, papers que da) y documentos
   propios (artículos `.tex` + PDF, guiones, notas). **Se sube a GitHub, PDFs incluidos.**
