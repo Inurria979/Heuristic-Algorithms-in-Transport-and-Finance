@@ -1,0 +1,17 @@
+[project]
+name = "tsp"
+version = "0.1.0"
+description = "Constructive greedy heuristics (nearest neighbour, greedy edge) for the TSP on the TSPLIB instances"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "pandas>=3.0.6",
+    "scipy>=1.18.1",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+]

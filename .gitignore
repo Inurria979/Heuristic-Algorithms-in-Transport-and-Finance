@@ -1,0 +1,56 @@
+# ─── Virtual environments ────────────────────────────────────────────────────
+# One per project, created with `uv sync` inside its folder. Never committed:
+# it is rebuilt from pyproject.toml + uv.lock.
+.venv/
+venv/
+env/
+
+# The `uv.lock` files ARE committed (reproducibility). Do not add them here.
+
+# ─── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+wheels/
+*.egg-info/
+.eggs/
+
+# ─── Tool caches ─────────────────────────────────────────────────────────────
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# ─── Editors and agents ──────────────────────────────────────────────────────
+.vscode/
+.idea/
+.claude/settings.local.json
+.claude/history/
+
+# ─── LaTeX auxiliary files (the article of each project) ─────────────────────
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.out
+*.synctex.gz
+*.toc
+*.log
+
+# ─── Working material that is not a deliverable ──────────────────────────────
+# `ignore/` (one per project): original downloads, zips, archived scripts and
+# anything else that should stay local. Everything in `docs/` IS committed,
+# PDFs included.
+ignore/
+
+# ─── Operating system ────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
