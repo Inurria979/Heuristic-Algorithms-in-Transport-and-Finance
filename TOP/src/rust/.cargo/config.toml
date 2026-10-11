@@ -1,0 +1,7 @@
+# Build artefacts go to the git-ignored TOP/ignore/ folder, never inside src/.
+# Paths here resolve from TOP/src/rust; cargo only reads this file when run from this folder.
+[build]
+target-dir = "../../ignore/target"
+# Use every instruction set of this CPU (the binary may not run on older CPUs). It does not
+# change floating-point results: Rust never fuses or reorders operations on its own.
+rustflags = ["-C", "target-cpu=native"]

@@ -1,0 +1,18 @@
+[package]
+name = "pjs"
+version = "0.1.0"
+edition = "2021"
+description = "PJS savings heuristic for the Team Orienteering Problem (Panadero et al. 2021)"
+
+[dependencies]
+plotters = { version = "0.3", default-features = false, features = ["bitmap_backend", "bitmap_encoder", "ab_glyph", "line_series", "point_series"] }
+rand = { version = "0.10", default-features = false, features = ["std_rng"] }  # seeded only: no OS entropy (getrandom needs dlltool)
+rayon = "1"
+
+# Most aggressive optimisation: whole-program LTO across crates, one codegen unit (better
+# inlining), abort on panic (no unwinding tables). Slower to compile, faster to run.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"

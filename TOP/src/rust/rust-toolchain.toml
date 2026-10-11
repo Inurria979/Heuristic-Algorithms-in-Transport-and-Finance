@@ -1,0 +1,4 @@
+# GNU toolchain: ships its own MinGW linker, so no Visual Studio C++ tools are needed.
+[toolchain]
+channel = "stable-x86_64-pc-windows-gnu"
+profile = "minimal"
