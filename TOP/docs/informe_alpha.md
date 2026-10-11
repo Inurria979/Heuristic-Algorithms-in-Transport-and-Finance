@@ -16,7 +16,7 @@ La heurística de ahorros de Panadero et al. (2021, sección 4) construye una ru
 - **GRASP** (solo construcción, sin búsqueda local): para cada α, 10 ejecuciones con la **geométrica** (β = 0.3) y 10 con el **softmax** (τ = 1). Cada ejecución sigue el multiarranque de Li et al. (2022, Algoritmo 1) y cada hilo del Algoritmo 1 de Panadero: parte de la solución determinista y hace **10 construcciones aleatorias**, quedándose con la mejor. Cada ejecución tiene su propia semilla (derivada de la semilla base 1, la instancia, α, la aleatorización y el número de ejecución), así que sus resultados son distintos entre sí y el experimento es reproducible.
 - **Geométrica:** el siguiente arco es el k-ésimo de los que quedan, con k ~ Geom(β). **Softmax:** cada arco que queda se elige con probabilidad exp(s'/τ) / Σ exp(s'/τ).
 - **Criterio:** solo cuenta la recompensa total; las rutas solo tienen que respetar `tmax`.
-- **Ejecución:** las 170667 tareas (instancia, α, construcción determinista o ejecución de GRASP) se reparten en paralelo con rayon (138 s). Cada solución se comprueba de forma independiente (como mucho m rutas, ningún cliente repetido, cada ruta dentro de `tmax`, tiempos y recompensas recalculados).
+- **Ejecución:** las 170667 tareas (instancia, α, construcción determinista o ejecución de GRASP) se reparten en paralelo con rayon (127 s). Cada solución se comprueba de forma independiente (como mucho m rutas, ningún cliente repetido, cada ruta dentro de `tmax`, tiempos y recompensas recalculados).
 - **Datos:** 387 instancias de Chao et al. (1996). En 34 de ellas ningún cliente es alcanzable ni con una ruta de un solo cliente, así que su recompensa es 0; el análisis usa las 353 restantes.
 
 ## Resultados globales

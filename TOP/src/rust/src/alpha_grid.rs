@@ -10,7 +10,7 @@
 
 use crate::grasp::{grasp, stream_seed, GraspConfig, Randomization};
 use crate::heuristic::pjs;
-use crate::model::Instance;
+use crate::model::{Instance, Solution};
 use rayon::prelude::*;
 use std::time::Instant;
 
@@ -93,17 +93,20 @@ pub struct Best {
 
 /// Everything the grid experiment produces: `runs[f * ALPHAS + k]` is instance f with
 /// alpha_k, and `grasp[((f * ALPHAS + k) * 2 + m) * reps + r]` is its GRASP run r with
-/// randomisation m.
+/// randomisation m. `det_solutions` and `grasp_solutions` hold the solutions with the same
+/// indices, for the local search on the elite solutions.
 pub struct GridResult {
     pub runs: Vec<Run>,
     pub grasp: Vec<GraspRun>,
+    pub det_solutions: Vec<Solution>,
+    pub grasp_solutions: Vec<Solution>,
     pub seconds: f64,
 }
 
 /// Outcome of one task of the flat list.
 enum Task {
-    Deterministic { reward: f64, time: f64, routes: usize, visited: usize },
-    Grasp(GraspRun),
+    Deterministic(Solution),
+    Grasp(GraspRun, Solution),
 }
 
 /// Task t of an (instance, alpha) pair: t = 0 is the deterministic construction, t = 1 +
@@ -114,7 +117,7 @@ fn run_task(inst: &Instance, k: usize, t: usize, cfg: &GridConfig) -> Result<Tas
     if t == 0 {
         let (sol, _) = pjs(inst, alpha);
         sol.check(inst).map_err(|e| fail("deterministic", e))?;
-        return Ok(Task::Deterministic { reward: sol.reward, time: sol.time, routes: sol.routes.len(), visited: sol.visited() });
+        return Ok(Task::Deterministic(sol));
     }
     let (m, r) = ((t - 1) / cfg.reps, (t - 1) % cfg.reps);
     let method = cfg.methods[m];
@@ -122,13 +125,14 @@ fn run_task(inst: &Instance, k: usize, t: usize, cfg: &GridConfig) -> Result<Tas
     let gcfg = GraspConfig { alpha, randomization: method, iterations: cfg.iterations, time_limit: None };
     let res = grasp(inst, &gcfg, seed);
     res.solution.check(inst).map_err(|e| fail(method.name(), e))?;
-    Ok(Task::Grasp(GraspRun {
+    let run = GraspRun {
         seed,
         reward: res.solution.reward,
         best_iteration: res.best_iteration,
         iterations: res.iterations,
         seconds: res.seconds,
-    }))
+    };
+    Ok(Task::Grasp(run, res.solution))
 }
 
 /// The grid experiment on every instance: all (instance, alpha, task) triples in one flat
@@ -147,28 +151,36 @@ pub fn solve_all(instances: &[Instance], cfg: &GridConfig) -> Result<GridResult,
 
     let mut runs = Vec::with_capacity(instances.len() * ALPHAS);
     let mut grasp_runs = Vec::with_capacity(instances.len() * ALPHAS * 2 * cfg.reps);
-    for pair in out.chunks(tasks) {
-        let Task::Deterministic { reward, time, routes, visited } = pair[0] else { unreachable!() };
-        let g: Vec<GraspRun> = pair[1..]
-            .iter()
-            .map(|t| match t {
-                Task::Grasp(g) => *g,
-                Task::Deterministic { .. } => unreachable!(),
-            })
-            .collect();
+    let mut det_solutions = Vec::with_capacity(instances.len() * ALPHAS);
+    let mut grasp_solutions = Vec::with_capacity(instances.len() * ALPHAS * 2 * cfg.reps);
+    let mut out = out.into_iter();
+    for _ in 0..instances.len() * ALPHAS {
+        let Some(Task::Deterministic(sol)) = out.next() else { unreachable!() };
+        let mut g = Vec::with_capacity(2 * cfg.reps);
+        for _ in 0..2 * cfg.reps {
+            let Some(Task::Grasp(run, sol)) = out.next() else { unreachable!() };
+            g.push(run);
+            grasp_solutions.push(sol);
+        }
         let stats = |m: usize| RepStats::of(&g[m * cfg.reps..(m + 1) * cfg.reps].iter().map(|x| x.reward).collect::<Vec<_>>());
-        runs.push(Run { reward, time, routes, visited, grasp: [stats(0), stats(1)] });
+        runs.push(Run { reward: sol.reward, time: sol.time, routes: sol.routes.len(), visited: sol.visited(), grasp: [stats(0), stats(1)] });
         grasp_runs.extend(g);
+        det_solutions.push(sol);
     }
-    Ok(GridResult { runs, grasp: grasp_runs, seconds })
+    Ok(GridResult { runs, grasp: grasp_runs, det_solutions, grasp_solutions, seconds })
 }
 
 /// Smallest alpha of the grid with the highest deterministic reward on one instance,
 /// solved sequentially (for callers that already run instances in parallel).
 pub fn best_grid_alpha(inst: &Instance) -> Result<f64, String> {
+    Ok(grid_alpha(best_grid_k(inst)))
+}
+
+/// Index in the grid of the smallest alpha with the highest deterministic reward.
+pub fn best_grid_k(inst: &Instance) -> usize {
     let rewards: Vec<f64> = (0..ALPHAS).map(|k| pjs(inst, grid_alpha(k)).0.reward).collect();
     let best = rewards.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    Ok(grid_alpha(rewards.iter().position(|&r| r == best).unwrap()))
+    rewards.iter().position(|&r| r == best).unwrap()
 }
 
 /// Best deterministic alpha from the runs of one instance (runs[k] is alpha_k): only the

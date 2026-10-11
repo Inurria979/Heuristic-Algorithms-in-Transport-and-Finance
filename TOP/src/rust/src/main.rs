@@ -5,8 +5,12 @@
 //!   heuristic   savings construction with a pluggable arc selector (Greedy = PJS)
 //!   alpha_grid  alpha grid 0, 0.05, ..., 1: deterministic + GRASP runs per alpha, in parallel
 //!   grasp       GRASP construction phase: geometric or softmax arc choice, multi-start
+//!   elite       elite solutions of the grid (best alphas, best GRASP runs) without duplicates
+//!   local_search  2-opt inside every route + insertion of the best unvisited customer
 //!   plot        PNG figures (routes of a solution, alpha grid)
 //!   report      Markdown report on the best alpha
+//!   ls_report   Markdown report on the local search over the elite solutions
+//!   panadero    comparison with Panadero et al. (2021), Tables 3-4, and a 1 s run per thread as there
 //!   io          loading instances and writing files
 //!
 //! Build (from TOP/src/rust, so that rust-toolchain.toml and .cargo/config.toml apply):
@@ -18,11 +22,15 @@
 //!   pjs grid [GRID] [--png out.png] <instance.txt>
 //!       grid experiment on one instance: a table per alpha, then the steps and routes of
 //!       the best deterministic alpha
-//!   pjs grid [GRID] [--png-dir DIR] [--report FILE.md] <data_dir> <out_dir>
+//!   pjs grid [GRID] [--png-dir DIR] [--report FILE.md] [--ls-png-dir DIR] [--ls-report FILE.md]
+//!            <data_dir> <out_dir>
 //!       grid experiment on every instance; writes <out_dir>/alpha_grid.csv (one row per
 //!       instance and alpha), <out_dir>/grasp_runs.csv (one row per GRASP run) and
 //!       <out_dir>/best_alpha.csv, the best deterministic routes to DIR and the Markdown
-//!       report (figures in <out_dir>/figures)
+//!       report (figures in <out_dir>/figures). Then the local search on the elite
+//!       solutions: <out_dir>/local_search.csv (one row per elite), <out_dir>/best_solution.csv
+//!       (one row per instance), the routes of the best solution to --ls-png-dir and its
+//!       report to --ls-report
 //!   GRID options: for every alpha of the grid 0, 0.05, ..., 1, one deterministic
 //!   construction and --reps R GRASP runs (default 10) with each randomisation, every run
 //!     with --iters N randomised constructions (default 10) and its own seed;
@@ -31,6 +39,14 @@
 //!       GRASP on one instance: the best routes found
 //!   pjs grasp [GRASP] [--png-dir DIR] <data_dir> <out.csv>
 //!       GRASP on every instance, one CSV row each
+//!   pjs panadero [--alpha best|grid] [--time S] [--runs R] [--geometric B] [--softmax T] [--seed S]
+//!                [--best-csv FILE] [--report FILE.md] <data_dir> <panadero.csv> <best_solution.csv> <out_dir>
+//!       only for the instances of the paper's tables: with the best grid alpha (default) or
+//!       every alpha of the grid, R GRASP runs (default 10) per alpha and randomisation lasting
+//!       S seconds of wall-clock time each (default 1), elite and local search; writes
+//!       <out_dir>/panadero_1s[_grid].csv and <out_dir>/panadero_1s[_grid]_runs.csv and the
+//!       report comparing the paper, the grid (best_solution.csv), this experiment and, with
+//!       --best-csv, the results of --alpha best (panadero_1s.csv)
 //!   GRASP options:
 //!     --alpha A|best   alpha of the enriched savings (default best: the best of the grid)
 //!     --geometric B    arc position ~ Geom(B) (default, B = 0.3 as in the paper)
@@ -45,10 +61,14 @@
 //! The first node is the source, the last one the sink; travel times are Euclidean distances.
 
 mod alpha_grid;
+mod elite;
 mod grasp;
 mod heuristic;
 mod io;
+mod local_search;
+mod ls_report;
 mod model;
+mod panadero;
 mod plot;
 mod report;
 
@@ -56,6 +76,7 @@ use alpha_grid::{
     best_alpha, best_csv, best_grasp, best_grid_alpha, grasp_runs_csv, grid_alpha, grid_csv, mean_time_us, solve_all, Best, GridConfig, ALPHAS,
     GRID_TEXT,
 };
+use elite::{best_solution_csv, local_search_csv, origin_text, run_local_search, LsResult};
 use grasp::{grasp_runs, GraspConfig, GraspResult, Randomization};
 use heuristic::pjs;
 use model::{Instance, Solution};
@@ -140,14 +161,54 @@ fn grid_one(path: &Path, cfg: &GridConfig, png: Option<&Path>) -> Result<(), Str
         plot_solution(&inst, &sol, &best_note(&best), png)?;
         println!("plot     {}", png.display());
     }
+    let ls = run_local_search(std::slice::from_ref(&inst), &res, cfg)?;
+    let ie = &ls.instances[0];
+    println!("local search on {} elite solutions ({} selected, duplicates dropped), {:.3} s", ie.elite.len(), ie.selected, ls.seconds);
+    println!("  origin          alpha  run   before    after  inserted  2-opt");
+    for e in &ie.elite {
+        let (origin, rep) = origin_text(e.origin, &cfg.methods);
+        println!(
+            "  {origin:<15} {:.2} {rep:>4} {:>8} {:>8} {:>9} {:>6}",
+            grid_alpha(e.k),
+            e.before.reward,
+            e.after.reward,
+            e.stats.inserted,
+            e.stats.two_opt
+        );
+    }
+    let b = &ie.elite[ie.best()];
+    println!(
+        "best     {} after local search ({} before, {}, alpha {:.2})",
+        b.after.reward,
+        b.before.reward,
+        origin_text(b.origin, &cfg.methods).0,
+        grid_alpha(b.k)
+    );
+    print_routes(&inst, &b.after);
     Ok(())
+}
+
+/// Subtitle of the route plot of the best solution after the local search.
+fn ls_note(ls: &LsResult, f: usize, cfg: &GridConfig) -> String {
+    let ie = &ls.instances[f];
+    let b = &ie.elite[ie.best()];
+    let (origin, rep) = origin_text(b.origin, &cfg.methods);
+    let run = if rep.is_empty() { String::new() } else { format!(", run {rep}") };
+    format!(
+        "Best of {} elite solutions after local search (2-opt + insertion)  ·  from {origin}, alpha = {:.2}{run}  ·  \
+         reward {} before local search, {} customers inserted",
+        ie.elite.len(),
+        grid_alpha(b.k),
+        b.before.reward,
+        b.stats.inserted
+    )
 }
 
 /// Run the grid experiment on every instance of a folder, all tasks in one parallel list;
 /// write alpha_grid.csv, grasp_runs.csv and best_alpha.csv to `out_dir`; with `png_dir`,
 /// draw the best deterministic solution of every instance; with `report`, write the
 /// Markdown report (its figures go to <out_dir>/figures).
-fn grid_all(dir: &Path, out_dir: &Path, cfg: &GridConfig, png_dir: Option<&Path>, report: Option<&Path>) -> Result<(), String> {
+fn grid_all(dir: &Path, out_dir: &Path, cfg: &GridConfig, png_dir: Option<&Path>, report: Option<&Path>, ls_out: &LsOutputs) -> Result<(), String> {
     let instances = io::load_all(dir)?;
     let res = solve_all(&instances, cfg)?;
     let bests: Vec<Best> = res.runs.chunks(ALPHAS).map(best_alpha).collect();
@@ -196,7 +257,37 @@ fn grid_all(dir: &Path, out_dir: &Path, cfg: &GridConfig, png_dir: Option<&Path>
     if let Some(report) = report {
         report::write_report(&instances, &res, &bests, cfg, report, &out_dir.join("figures"), png_dir)?;
     }
+
+    let ls = run_local_search(&instances, &res, cfg)?;
+    let (ls_path, sol_path) = (out_dir.join("local_search.csv"), out_dir.join("best_solution.csv"));
+    io::write_file(&ls_path, &local_search_csv(&instances, &ls, cfg))?;
+    io::write_file(&sol_path, &best_solution_csv(&instances, &res, &ls, cfg))?;
+    let elite: usize = ls.instances.iter().map(|ie| ie.elite.len()).sum();
+    let selected: usize = ls.instances.iter().map(|ie| ie.selected).sum();
+    let best: f64 = ls.instances.iter().map(|ie| ie.elite[ie.best()].after.reward).sum();
+    println!("local search on {elite} elite solutions ({selected} selected, duplicates dropped) in {:.1} s", ls.seconds);
+    println!("total reward, best elite of every instance after local search: {best}");
+    println!("-> {}\n-> {}", ls_path.display(), sol_path.display());
+    if let Some(dir) = ls_out.png_dir {
+        (0..instances.len())
+            .into_par_iter()
+            .map(|f| {
+                let (inst, ie) = (&instances[f], &ls.instances[f]);
+                plot_solution(inst, &ie.elite[ie.best()].after, &ls_note(&ls, f, cfg), &dir.join(format!("{}.png", inst.name)))
+            })
+            .collect::<Result<(), String>>()?;
+        println!("-> {} plots in {}", instances.len(), dir.display());
+    }
+    if let Some(report) = ls_out.report {
+        ls_report::write_ls_report(&instances, &res, &ls, cfg, report, ls_out.png_dir)?;
+    }
     Ok(())
+}
+
+/// Optional outputs of the local search: route plots and Markdown report.
+struct LsOutputs<'a> {
+    png_dir: Option<&'a Path>,
+    report: Option<&'a Path>,
 }
 
 /// GRASP settings from the command line; `alpha` is None for "best".
@@ -339,6 +430,53 @@ fn grasp_all(dir: &Path, out: &Path, args: &GraspArgs, png_dir: Option<&Path>) -
     Ok(())
 }
 
+/// Comparison with Panadero et al. (2021): the timed experiment on the instances of the
+/// paper's tables, its CSVs and the Markdown report.
+fn panadero_all(paths: [&Path; 4], cfg: &panadero::TimedConfig, report: Option<&Path>, best_csv: Option<&Path>) -> Result<(), String> {
+    let [data_dir, reference, grid_best, out_dir] = paths;
+    let refs = panadero::load_reference(reference)?;
+    let grid = panadero::load_best(grid_best)?;
+    let best_1s = best_csv.map(panadero::load_best).transpose()?;
+    let instances: Vec<Instance> =
+        refs.par_iter().map(|r| Instance::load(&data_dir.join(format!("{}.txt", r.name)))).collect::<Result<_, String>>()?;
+    let (timed, ls, seconds) = panadero::run_timed(&instances, cfg)?;
+    let (per, runs) = panadero::timed_csvs(&instances, &timed, &ls, cfg);
+    let (per_path, runs_path) = (out_dir.join(format!("{}.csv", cfg.stem())), out_dir.join(format!("{}_runs.csv", cfg.stem())));
+    io::write_file(&per_path, &per)?;
+    io::write_file(&runs_path, &runs)?;
+    let best: f64 = ls.instances.iter().map(|ie| ie.elite[ie.best()].after.reward).sum();
+    println!(
+        "{} instances x {} GRASP runs of {} s (wall clock) in {seconds:.1} s on {} threads; total reward after local search {best}",
+        instances.len(),
+        timed.first().map_or(0, |t| t.runs.len()),
+        cfg.time,
+        rayon::current_num_threads()
+    );
+    println!("-> {}\n-> {}", per_path.display(), runs_path.display());
+    if let Some(report) = report {
+        let p = |path: &Path| path.display().to_string().replace('\\', "/");
+        let extra = best_csv.map(|b| format!(" --best-csv {}", p(b))).unwrap_or_default();
+        let cmd = format!(
+            "ignore/target/release/pjs.exe panadero --alpha {} --time {} --runs {} --geometric {} --softmax {} --seed {}{extra} \\\n    --report {} {} {} {} {}",
+            if cfg.grid { "grid" } else { "best" },
+            cfg.time,
+            cfg.runs,
+            cfg.methods[0].param(),
+            cfg.methods[1].param(),
+            cfg.seed,
+            p(report),
+            p(data_dir),
+            p(reference),
+            p(grid_best),
+            p(out_dir)
+        );
+        let best_name = best_csv.and_then(|b| b.file_name()).map(|f| f.to_string_lossy().into_owned()).unwrap_or_default();
+        let input = panadero::ReportInputs { refs: &refs, grid: &grid, best_1s: best_1s.as_ref(), best_name: &best_name, seconds, cmd: &cmd };
+        panadero::write_comparison(&instances, &timed, &ls, cfg, &input, report)?;
+    }
+    Ok(())
+}
+
 /// Remove `flag VALUE` from the arguments and return VALUE, if the flag is present.
 fn take_flag(args: &mut Vec<String>, flag: &str) -> Option<String> {
     let k = args.iter().position(|a| a == flag)?;
@@ -357,7 +495,8 @@ fn usage(msg: &str) -> ! {
     eprintln!("{msg}");
     eprintln!(
         "usage: pjs grid [GRID] [--png out.png] <instance.txt>\n       \
-         pjs grid [GRID] [--png-dir DIR] [--report FILE.md] <data_dir> <out_dir>\n       \
+         pjs grid [GRID] [--png-dir DIR] [--report FILE.md] [--ls-png-dir DIR] [--ls-report FILE.md] <data_dir> <out_dir>\n       \
+         pjs panadero [--alpha best|grid] [--time S] [--runs R] [--geometric B] [--softmax T] [--seed S] [--best-csv FILE] [--report FILE.md] <data_dir> <panadero.csv> <best_solution.csv> <out_dir>\n       \
          pjs grasp [GRASP] [--png out.png] <instance.txt>\n       \
          pjs grasp [GRASP] [--png-dir DIR] <data_dir> <out.csv>\n\
          GRID: --reps R  --iters N  --geometric BETA  --softmax TAU  --seed S\n\
@@ -418,11 +557,36 @@ fn main() {
     let result = match command.as_str() {
         "grid" => {
             let report = take_flag(&mut args, "--report").map(PathBuf::from);
+            let ls_png_dir = take_flag(&mut args, "--ls-png-dir").map(PathBuf::from);
+            let ls_report = take_flag(&mut args, "--ls-report").map(PathBuf::from);
+            let ls_out = LsOutputs { png_dir: ls_png_dir.as_deref(), report: ls_report.as_deref() };
             let cfg = grid_args(&mut args);
             match args.as_slice() {
                 [file] => grid_one(Path::new(file), &cfg, png.as_deref()),
-                [dir, out_dir] => grid_all(Path::new(dir), Path::new(out_dir), &cfg, png_dir.as_deref(), report.as_deref()),
+                [dir, out_dir] => grid_all(Path::new(dir), Path::new(out_dir), &cfg, png_dir.as_deref(), report.as_deref(), &ls_out),
                 _ => usage("wrong arguments for grid"),
+            }
+        }
+        "panadero" => {
+            let report = take_flag(&mut args, "--report").map(PathBuf::from);
+            let best_csv = take_flag(&mut args, "--best-csv").map(PathBuf::from);
+            let grid = match take_flag(&mut args, "--alpha").as_deref() {
+                None | Some("best") => false,
+                Some("grid") => true,
+                Some(_) => usage("--alpha needs best or grid"),
+            };
+            let beta = parse_flag(&mut args, "--geometric", |b: &f64| *b > 0.0 && *b < 1.0, "a beta in (0, 1)").unwrap_or(0.3);
+            let tau = parse_flag(&mut args, "--softmax", |t: &f64| *t > 0.0, "a temperature > 0").unwrap_or(1.0);
+            let cfg = panadero::TimedConfig {
+                grid,
+                time: parse_flag(&mut args, "--time", |t: &f64| *t > 0.0, "seconds > 0").unwrap_or(1.0),
+                runs: parse_flag(&mut args, "--runs", |r: &usize| *r > 0, "a number of runs > 0").unwrap_or(10),
+                methods: [Randomization::Geometric { beta }, Randomization::Softmax { tau }],
+                seed: parse_flag(&mut args, "--seed", |_: &u64| true, "an integer seed").unwrap_or(1),
+            };
+            match args.as_slice() {
+                [d, r, g, o] => panadero_all([Path::new(d), Path::new(r), Path::new(g), Path::new(o)], &cfg, report.as_deref(), best_csv.as_deref()),
+                _ => usage("wrong arguments for panadero"),
             }
         }
         "grasp" => {

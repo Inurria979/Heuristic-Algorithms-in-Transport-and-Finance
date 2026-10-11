@@ -9,7 +9,7 @@ use std::fs;
 use std::path::Path;
 
 /// Median of a list of numbers (0 for an empty list).
-fn median(mut v: Vec<f64>) -> f64 {
+pub fn median(mut v: Vec<f64>) -> f64 {
     if v.is_empty() {
         return 0.0;
     }
@@ -23,7 +23,7 @@ fn median(mut v: Vec<f64>) -> f64 {
 }
 
 /// Path of `target` relative to the folder `base`, with forward slashes (for Markdown links).
-fn relative_to(base: &Path, target: &Path) -> Result<String, String> {
+pub fn relative_to(base: &Path, target: &Path) -> Result<String, String> {
     let canon = |p: &Path| fs::canonicalize(p).map_err(|e| format!("{}: {e}", p.display()));
     let (base, target) = (canon(base)?, canon(target)?);
     let (b, t): (Vec<_>, Vec<_>) = (base.components().collect(), target.components().collect());
@@ -43,7 +43,7 @@ fn pct(a: f64, b: f64) -> f64 {
 }
 
 /// Percentage that `a` exceeds `b`.
-fn gain(a: f64, b: f64) -> f64 {
+pub fn gain(a: f64, b: f64) -> f64 {
     if b > 0.0 {
         100.0 * (a - b) / b
     } else {

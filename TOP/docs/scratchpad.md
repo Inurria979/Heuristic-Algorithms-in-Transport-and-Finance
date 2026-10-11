@@ -9,10 +9,14 @@ ejecuta y qué falta. El informe con resultados está en [`informe_alpha.md`](in
 
 1. **Implementar la heurística PJS para el TOP y probarla en varias instancias.** Hecho.
 2. **Análisis de datos de los resultados.** Hecho para la rejilla de α y GRASP (`informe_alpha.md`).
-3. *(Opcional)* **Combinar GRASP con PJS.** Hecha la fase de construcción (multiarranque aleatorizado).
+3. *(Opcional)* **Combinar GRASP con PJS.** Hecha la construcción (multiarranque aleatorizado) y la búsqueda local sobre las soluciones élite (sección 6b, `informe_busqueda_local.md`).
 4. *(Opcional)* **Mejorar GRASP-PJS con aleatorización sesgada.** Hecho con la geométrica; también hay softmax.
 
-**Pendiente:** la búsqueda local de GRASP (sección 8).
+**Documentos de la búsqueda local** (12-10-2026):
+
+- [`busqueda_local.md`](busqueda_local.md): todas las opciones de movimientos, con sus pros y contras.
+- [`busqueda_local_diseno.md`](busqueda_local_diseno.md): las decisiones acordadas y el pseudocódigo.
+- [`informe_busqueda_local.md`](informe_busqueda_local.md): los resultados, generado por `pjs grid`.
 
 Papers, en `docs/`; su texto extraído está en `ignore/papers_txt/`, con las letras griegas intactas:
 
@@ -40,9 +44,13 @@ Papers, en `docs/`; su texto extraído está en `ignore/papers_txt/`, con las le
 | `model.rs` | `Instance` (lectura, matriz de distancias, `t(i,j)`, `route_time`, `reachable`), `Route`, `Solution` y `Solution::check()`, la comprobación independiente de factibilidad |
 | `heuristic.rs` | La heurística PJS por pasos, el trait `ArcSelector`, `Greedy`, `SavingsList` (lista de ahorros reutilizable), `construct()` y `pjs()` |
 | `grasp.rs` | Los selectores aleatorios (geométrica, softmax con árbol de sumas), `grasp()` (multiarranque), `stream_seed()` y `grasp_runs()` (ejecuciones en paralelo); incluye tests unitarios |
-| `alpha_grid.rs` | El experimento de la rejilla: tareas planas en paralelo, el mejor α y los CSV |
+| `alpha_grid.rs` | El experimento de la rejilla: tareas planas en paralelo, el mejor α y los CSV. Guarda también las soluciones (`det_solutions`, `grasp_solutions`) para la búsqueda local |
+| `elite.rs` | Elección de las élite (`top_with_ties`), eliminación de duplicados, `run_local_search()` en paralelo, `local_search.csv` y `best_solution.csv` |
+| `local_search.rs` | La búsqueda local: `two_opt()`, `insert_one()` y `local_search()`, con sus tests |
 | `plot.rs` | Figuras PNG con plotters: rutas, recompensa total frente a α y mapa de calor |
 | `report.rs` | El informe Markdown `docs/informe_alpha.md`, generado desde Rust |
+| `ls_report.rs` | El informe Markdown `docs/informe_busqueda_local.md` |
+| `panadero.rs` | El subcomando `pjs panadero`: experimento de 1 s por ejecución con el mejor α, élite y búsqueda local, y la comparación con las tablas 3 y 4 de Panadero (`docs/comparacion_panadero.md`) |
 | `io.rs` | Cargar las instancias de una carpeta y escribir ficheros |
 | `main.rs` | La línea de comandos, con los subcomandos `grid` y `grasp` |
 
@@ -51,7 +59,7 @@ Papers, en `docs/`; su texto extraído está en `ignore/papers_txt/`, con las le
 ```
 cd TOP/src/rust
 cargo build --release      # ejecutable: TOP/ignore/target/release/pjs.exe
-cargo test --release       # tests de los selectores
+cargo test --release       # tests de los selectores, la búsqueda local y la elección de élite
 ```
 
 Decisiones de entorno y por qué:
@@ -89,13 +97,13 @@ Decisiones nuestras, porque el paper no las fija:
 - **Decisión: rejilla de α y quedarse con el mejor de cada instancia.** Primero se probaron 100 valores (k/99). Ahora son **21 valores: 0, 0.05, 0.10, …, 0.95, 1** (`ALPHAS = 21`, `grid_alpha(k) = k/20`).
 - **Criterio:** solo cuenta la **recompensa total**; el tiempo de las rutas solo tiene que respetar `tmax`. Si varios α empatan, todos son óptimos. Se informa del menor, de cuántos son y de su rango.
 
-## 6. GRASP (solo construcción; falta la búsqueda local)
+## 6. GRASP: construcción
 
 **Qué es una iteración y qué es una ejecución.** Así lo plantean los papers:
 
 - **Una iteración** es una construcción aleatorizada completa: dummy, lista de ahorros, arcos elegidos al azar, fusión y selección de m rutas. Equivale a `BRA(...)` en Li et al.
 - **Una ejecución de GRASP** es el multiarranque (Li et al., Algoritmo 1). Parte de la solución determinista y repite iteraciones, quedándose con la mejor, hasta un número de iteraciones (`--iters`) o un tiempo (`--time`). Equivale a un hilo del Algoritmo 1 de Panadero, que itera durante 1 s.
-- **No hay mejora de soluciones** (eso será la búsqueda local). Solo se generan muchas soluciones y se guarda la mejor.
+- **Dentro de GRASP no hay mejora de soluciones.** Solo se generan muchas soluciones y se guarda la mejor. La búsqueda local se aplica después, sobre las élite (sección 6b).
 
 **Selectores** (trait `ArcSelector`: `start(savings)` y `next()`, que devuelve el índice del siguiente arco, cada uno una sola vez):
 
@@ -113,15 +121,35 @@ Decisiones nuestras, porque el paper no las fija:
 - Dentro de una ejecución, el generador avanza con cada elección, así que todas las iteraciones son distintas. Se siembra **una vez por ejecución**, como en el Algoritmo 1 de Panadero: una semilla por hilo.
 - `stream_seed(base, nombre_instancia, etiquetas)` deriva una semilla distinta por (instancia, α, aleatorización, ejecución). Así el resultado no depende del orden de los hilos ni de si la instancia se resuelve sola o con toda la carpeta.
 
+## 6b. Búsqueda local sobre las élite
+
+El detalle está en [`busqueda_local_diseno.md`](busqueda_local_diseno.md). Lo acordó el usuario el 12-10-2026:
+
+- **Va al final, no dentro de las iteraciones de GRASP.**
+- **Élite por instancia:**
+  - deterministas: las α con las 3 mejores recompensas;
+  - por aleatorización y α: las 3 mejores ejecuciones, de cada una su mejor solución.
+- **Criterio:** solo la recompensa. Los empates en la tercera entran todos, aunque sean más de 3.
+- **Duplicados:** dos élite son iguales si visitan el mismo conjunto de clientes. Se descarta la repetida sin sustituirla, también entre grupos, en el orden determinista → geométrica → softmax, α creciente, ejecución creciente.
+- **Búsqueda local:** en bucle,
+  1. 2-opt dentro de cada ruta, con primera mejora;
+  2. insertar un cliente: entre los no visitados que caben, el de mayor recompensa (en empate, el que menos tiempo añade), en su posición más barata de cualquier ruta.
+
+  Se repite mientras se inserte alguno.
+- **Primera ejecución completa:** 125 490 élite elegidas, 18 791 tras quitar duplicados. La búsqueda local tarda 0,4 s.
+
 ## 7. Experimentos actuales y cómo se ejecutan
 
 Todo desde `TOP/`, con `E=ignore/target/release/pjs.exe`.
 
-**Experimento principal (rejilla):**
+**Experimento principal (rejilla + búsqueda local):**
 
 ```
-$E grid --png-dir results/figures/routes --report docs/informe_alpha.md src/data/top-data results
+$E grid --png-dir results/figures/routes --report docs/informe_alpha.md \
+    --ls-png-dir results/figures/routes_ls --ls-report docs/informe_busqueda_local.md src/data/top-data results
 ```
+
+La búsqueda local siempre se ejecuta. `--ls-png-dir` y `--ls-report` son opcionales; tarda unos 2 min 10 s en total.
 
 - **Por cada instancia y cada uno de los 21 α:**
   - 1 construcción determinista;
@@ -136,7 +164,10 @@ $E grid --png-dir results/figures/routes --report docs/informe_alpha.md src/data
   - `results/figures/alpha_total_reward.png` y `alpha_heatmap.png`.
   - `results/figures/routes/<instancia>.png`: rutas con el mejor α determinista.
   - `docs/informe_alpha.md`.
-- **Con una sola instancia:** `$E grid src/data/top-data/p4.4.t.txt [--png out.png]` imprime una tabla por α y las rutas.
+  - `results/local_search.csv`: una fila por élite, con la recompensa y el tiempo antes y después, los movimientos 2-opt y los clientes insertados.
+  - `results/best_solution.csv`: una fila por instancia, con la determinista, GRASP, la determinista con búsqueda local, la final y su origen.
+  - `results/figures/routes_ls/<instancia>.png` (59 MB) y `docs/informe_busqueda_local.md`.
+- **Con una sola instancia:** `$E grid src/data/top-data/p4.4.t.txt [--png out.png]` imprime una tabla por α, las rutas y una tabla de las élite antes y después de la búsqueda local.
 
 **GRASP con una configuración concreta:**
 
@@ -160,32 +191,81 @@ Por defecto: `--alpha best` (el mejor α determinista de la rejilla), geométric
 - El softmax con τ = 1 casi no aporta en p4 (+0.9 %). Con ahorros que se diferencian en decenas de unidades, τ = 1 deja el softmax casi como el voraz. Una idea pendiente es una rejilla de τ, o τ proporcional a la desviación típica de los ahorros.
 - **Comparación con el paper** (solo p1 y p2, BKS de las tablas 3 y 4): el determinista queda a un 6–8 % del BKS. Panadero, con 1 hilo durante 1 s, queda a un 1.73 %, y con 128 hilos a un 0.44 %.
 
+**Resultados con búsqueda local** (en `informe_busqueda_local.md`, sobre las 353 instancias factibles):
+
+| | Recompensa total | Frente al determinista |
+|---|---|---|
+| Determinista, mejor α | 157 868 | — |
+| Mejor GRASP (cualquier tipo), sin búsqueda local | 170 469 | +7.98 % |
+| Élite deterministas + búsqueda local | 181 103 | +14.72 % |
+| **Final: todas las élite + búsqueda local** | **189 854** | **+20.26 %** |
+
+- La búsqueda local mejora el 93.6 % de las élite, con una media del +18 % e inserta 7.5 clientes de media. Donde más aporta es en p4 (+28 % sobre GRASP) y en p7 (+18.5 %).
+- En 163 de 353 instancias la mejor final sale de una élite que **no** era la mejor antes de la búsqueda local.
+- **Frente a Panadero** (tablas 3 y 4, 80 instancias de p1/p2), detallado en [`comparacion_panadero.md`](comparacion_panadero.md):
+  - ninguna solución supera el BKS y 72 lo igualan;
+  - distancia media al BKS por instancia, la medida del paper: **0.35 % la nuestra**, 0.45 % Panadero con 128 hilos y 1.75 % con 1 hilo;
+  - frente a Panadero con 128 hilos, la nuestra es mejor en 10 instancias, igual en 64 y peor en 6;
+  - **cómo se genera:** los datos del paper están extraídos en `src/data/panadero2021_p1_p2.csv`, y la comparación la escribe `pjs panadero` (en Rust).
+
+**Experimento de 1 s como Panadero** (`pjs panadero`, 12-10-2026), sobre las 80 instancias de sus tablas:
+
+- **Configuración:** el mejor α de la rejilla y 10 ejecuciones geométricas más 10 softmax, de **1 s de reloj** cada una, en paralelo con 12 hilos. Después, élite (la determinista y las 3 mejores ejecuciones de cada tipo) y búsqueda local. Tarda 134 s.
+- **No es reproducible exactamente**, porque usa tiempo de reloj; el usuario lo eligió así a sabiendas.
+- **Iteraciones por ejecución:** unas 39 000 en p1 y unas 50 000 en p2.
+- **Resultado:** distancia media al BKS del **0.72 %**, peor que la rejilla (0.35 %) y que Panadero con 128 hilos (0.45 %). Una sola ejecución de 1 s, sin búsqueda local, da de media un 2.4–2.5 %, frente al 1.75 % de Panadero con 1 hilo.
+- **Lectura:** con un solo α, miles de iteraciones rinden menos que las 21 α × 20 ejecuciones × 10 iteraciones de la rejilla. Probar varios α aporta más que iterar más con uno fijo.
+- **Salidas:** `results/panadero_1s.csv` (una fila por instancia), `results/panadero_1s_runs.csv` (una por ejecución) y `docs/comparacion_panadero.md`.
+
+```
+$E panadero --report docs/comparacion_panadero.md src/data/top-data src/data/panadero2021_p1_p2.csv results/best_solution.csv results
+```
+
+Opciones: `--alpha best --time 1 --runs 10 --geometric 0.3 --softmax 1 --seed 1` son los valores por defecto. Necesita el `best_solution.csv` de `pjs grid`.
+
+**Variante con la rejilla de α** (`--alpha grid`, 12-10-2026). Solo para las instancias de Panadero; `pjs grid` no cambia.
+
+- **Configuración:** los 21 α con 10 + 10 ejecuciones de 1 s cada uno. Élite con las reglas de la rejilla y búsqueda local.
+- **Semillas:** las mismas que en la rejilla, así que cada ejecución empieza igual que la de 10 iteraciones y sigue iterando.
+- **Coste:** 33 600 ejecuciones, unos 47 min.
+- **Salidas:** `results/panadero_1s_grid.csv`, `results/panadero_1s_grid_runs.csv` y `docs/comparacion_panadero_rejilla.md`. Con `--best-csv results/panadero_1s.csv` incluye también los resultados con el mejor α.
+
+```
+$E panadero --alpha grid --best-csv results/panadero_1s.csv --report docs/comparacion_panadero_rejilla.md \
+    src/data/top-data src/data/panadero2021_p1_p2.csv results/best_solution.csv results
+```
+
+**Comprobación:** con 0,01 s, de 6 720 ejecuciones emparejadas con la rejilla solo 2 salieron peores, y fue porque hicieron menos de 10 iteraciones (arranque de los hilos). Las que llegan a 10 iteraciones nunca son peores, como corresponde a semillas compartidas.
+
+**Aviso:** `docs/comparacion_panadero.md` (modo best) se generó con la versión anterior del informe, con una columna α distinta y otro título. Regenerarlo cambiaría las cifras, porque usa tiempo de reloj.
+
 **Verificaciones hechas:**
 
-- `Solution::check()` en cada solución.
+- `Solution::check()` en cada solución, también después de la búsqueda local.
+- Al añadir la búsqueda local, `alpha_grid.csv` y `best_alpha.csv` salen idénticos, y `grasp_runs.csv`, idéntico salvo la columna de segundos.
+- Tests de la búsqueda local (cruce que el 2-opt deshace, inserción del mejor que cabe, desempate por menor tiempo, monotonía e idempotencia) y de `top_with_ties`.
 - Las 38 700 ejecuciones deterministas de la rejilla antigua comparadas con una implementación independiente en Python: 0 discrepancias.
 - Tests de los selectores: cada arco se elige una sola vez, Geom(0.3) y softmax con su distribución teórica, desbordamiento y árbol de sumas.
 - Cada refactorización y cada optimización comprobada con salidas idénticas byte a byte.
 
 ## 8. Pendiente
 
-1. **Búsqueda local de GRASP** (el siguiente paso):
-   - Irá en un módulo nuevo, `local_search.rs`, que recibe una `Solution` y la `Instance` y devuelve una solución mejor o igual, validada con `check()`.
-   - Movimientos candidatos:
-     - 2-opt dentro de cada ruta, para reducir el tiempo;
-     - insertar clientes no visitados en el tiempo liberado, para aumentar la recompensa;
-     - intercambios entre rutas o entre un cliente visitado y uno no visitado;
-     - quitar un cliente si eso permite insertar otro de más recompensa.
-   - Se enchufa en `grasp()`: en cada iteración, construir → búsqueda local → comparar con la mejor.
-   - Habrá que recuperar `Route::from_nodes(inst, nodes)`, que se quitó por no usarse.
+1. ~~**Búsqueda local de GRASP**~~: hecha el 12-10-2026 (sección 6b). Ideas que siguen abiertas, recogidas en `busqueda_local.md`:
+   - el reemplazo de un cliente visitado por uno no visitado;
+   - los movimientos entre rutas;
+   - meter la comparación con el BKS en el informe.
 2. ~~Ficheros obsoletos~~: los dos CSV antiguos de `pjs grasp` (`grasp_geometric_0.3.csv`, `grasp_softmax_1.csv`) se borraron al cerrar la sesión.
 3. **Andamiaje de `TOP/`:**
    - falta su `README.md`;
    - falta la fila de TOP en las tablas del README raíz y del `CLAUDE.md`;
    - hay que mover `src/data/top-data/` a `data/`, actualizando las rutas de los comandos.
-4. **Tamaño de `results/`:** unos 60 MB de PNG de rutas más los 11 MB de `grasp_runs.csv`, y `results/` se sube a GitHub. Hay que decidir si va todo o solo una selección.
-5. **Nada en commit.** `TOP/` y `GRASP/docs/presentation_script.md` están sin trackear.
-6. **Posible optimización:** compartir la lista de ahorros y la solución determinista entre las 20 ejecuciones de GRASP de cada (instancia, α). Ahora cada ejecución la recalcula, y con solo 10 iteraciones ese coste pesa.
+4. **Tamaño de `results/`:** unos 60 MB de PNG de rutas deterministas, otros 59 MB de rutas tras la búsqueda local y los 11 MB de `grasp_runs.csv`, y `results/` se sube a GitHub. Hay que decidir si va todo o solo una selección.
+5. **Commit:** la rejilla está en git (commit `b1f0fce`). La búsqueda local, sus documentos y sus resultados están sin commit.
+6. ~~**Posible optimización:** compartir la lista de ahorros y la solución determinista entre las 20 ejecuciones de GRASP de cada (instancia, α).~~ **Descartada** tras medirla el 11-10-2026 (detalle en [`coste_lista_ahorros.md`](coste_lista_ahorros.md)):
+   - la lista y la construcción determinista son solo el **3,5–5,4 %** de una ejecución de 10 iteraciones, tanto en p2 (21 nodos) como en p7 (102 nodos);
+   - compartirlas ahorraría unos 6 s de los 140 s de la rejilla.
+
+   **Lo que de verdad cuesta son las construcciones aleatorias:** cada una tarda entre 8 y 12 veces más que la voraz (en p7, ~1,3–1,6 ms frente a 135 µs). Si hace falta acelerar la rejilla, hay que mirar los selectores, sin investigar todavía.
 
 ## 9. Preferencias del usuario aprendidas en la sesión
 
