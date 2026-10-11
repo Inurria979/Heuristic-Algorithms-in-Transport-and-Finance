@@ -31,11 +31,46 @@ pub struct Reference {
     pub thr128: f64,
 }
 
+/// How long every GRASP run lasts.
+#[derive(Clone, Copy)]
+pub enum Budget {
+    /// Wall-clock seconds (not reproducible: the iterations depend on the machine's load).
+    Seconds(f64),
+    /// Fixed number of randomised constructions (reproducible).
+    Iterations(usize),
+}
+
+impl Budget {
+    /// Text for the report ("1 s", "100 iteraciones").
+    pub fn label(&self) -> String {
+        match self {
+            Budget::Seconds(t) => format!("{t} s"),
+            Budget::Iterations(n) => format!("{n} iteraciones"),
+        }
+    }
+
+    /// Tag for file names and CSVs ("1s", "100it").
+    pub fn tag(&self) -> String {
+        match self {
+            Budget::Seconds(t) => format!("{t}s"),
+            Budget::Iterations(n) => format!("{n}it"),
+        }
+    }
+
+    /// Command-line flag that gives this budget.
+    pub fn flag(&self) -> String {
+        match self {
+            Budget::Seconds(t) => format!("--time {t}"),
+            Budget::Iterations(n) => format!("--iters {n}"),
+        }
+    }
+}
+
 /// Settings of the timed experiment.
 #[derive(Clone, Copy)]
 pub struct TimedConfig {
-    /// Wall-clock seconds of every GRASP run.
-    pub time: f64,
+    /// Length of every GRASP run.
+    pub budget: Budget,
     /// GRASP runs per alpha and randomisation.
     pub runs: usize,
     pub methods: [Randomization; 2],
@@ -54,13 +89,9 @@ impl TimedConfig {
         }
     }
 
-    /// Base name of the output files.
-    pub fn stem(&self) -> &'static str {
-        if self.grid {
-            "panadero_1s_grid"
-        } else {
-            "panadero_1s"
-        }
+    /// Base name of the output files ("panadero_1s", "panadero_100it_grid").
+    pub fn stem(&self) -> String {
+        format!("panadero_{}{}", self.budget.tag(), if self.grid { "_grid" } else { "" })
     }
 }
 
@@ -161,7 +192,11 @@ pub fn run_timed(instances: &[Instance], cfg: &TimedConfig) -> Result<(Vec<Timed
             let (f, j) = (job / per, job % per);
             let (a, m, r) = (j / (2 * cfg.runs), j / cfg.runs % 2, j % cfg.runs);
             let (inst, k) = (&instances[f], base[f].1[a]);
-            let gcfg = GraspConfig { alpha: grid_alpha(k), randomization: cfg.methods[m], iterations: usize::MAX, time_limit: Some(cfg.time) };
+            let (iterations, time_limit) = match cfg.budget {
+                Budget::Seconds(t) => (usize::MAX, Some(t)),
+                Budget::Iterations(n) => (n, None),
+            };
+            let gcfg = GraspConfig { alpha: grid_alpha(k), randomization: cfg.methods[m], iterations, time_limit };
             let labels: Vec<u64> = if cfg.grid { vec![k as u64, m as u64, r as u64] } else { vec![m as u64, r as u64] };
             let res = grasp(inst, &gcfg, stream_seed(cfg.seed, &inst.name, &labels));
             res.solution.check(inst).map_err(|e| format!("{} alpha {} {}: {e}", inst.name, grid_alpha(k), cfg.methods[m].name()))?;
@@ -243,7 +278,7 @@ pub fn timed_csvs(instances: &[Instance], timed: &[Timed], ls: &LsResult, cfg: &
     let mut per = String::from(
         "instance,best_k,best_alpha,deterministic,best_no_ls,best_ls,origin,k,alpha,rep,reward_before_ls,inserted,mean_iterations,elite_selected,elite_kept\n",
     );
-    let mut runs = String::from("instance,k,alpha,randomization,param,rep,seconds_limit,iterations,best_iteration,reward,seconds\n");
+    let mut runs = String::from("instance,k,alpha,randomization,param,rep,budget,iterations,best_iteration,reward,seconds\n");
     for ((inst, t), ie) in instances.iter().zip(timed).zip(&ls.instances) {
         let b = &ie.elite[ie.best()];
         let (origin, rep) = origin_text(b.origin, &cfg.methods);
@@ -272,7 +307,7 @@ pub fn timed_csvs(instances: &[Instance], timed: &[Timed], ls: &LsResult, cfg: &
                 method.name(),
                 method.param(),
                 i % cfg.runs,
-                cfg.time,
+                cfg.budget.tag(),
                 g.iterations,
                 g.best_iteration,
                 g.solution.reward,
@@ -287,7 +322,7 @@ pub fn timed_csvs(instances: &[Instance], timed: &[Timed], ls: &LsResult, cfg: &
 pub struct ReportInputs<'a> {
     pub refs: &'a [Reference],
     pub grid: &'a HashMap<String, (f64, f64)>,
-    /// Results of mode best (results/panadero_1s.csv), to compare mode grid with them.
+    /// Results of another run of this command (e.g. results/panadero_1s.csv), to compare with.
     pub best_1s: Option<&'a HashMap<String, (f64, f64)>>,
     /// File name of best_1s, for the labels.
     pub best_name: &'a str,
@@ -321,8 +356,23 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
     let count = |v: &dyn Fn(&Row) -> bool| rows.iter().filter(|r| v(r)).count();
     let n = rows.len();
     let (g0, g1) = (cfg.methods[0].name(), cfg.methods[1].name());
-    let ts = if cfg.grid { format!("{} s, rejilla de α", cfg.time) } else { format!("{} s, mejor α", cfg.time) };
-    let tb = format!("Mejor α (`{}`)", input.best_name);
+    let budget = cfg.budget.label();
+    let ts = if cfg.grid { format!("{budget}, rejilla de α") } else { format!("{budget}, mejor α") };
+    let tb = format!("`{}`", input.best_name);
+    let run_text = match cfg.budget {
+        Budget::Seconds(t) => format!(
+            "cada una iterando durante {t} s de reloj**. Las {} ejecuciones se reparten entre {} hilos en un equipo de 6 núcleos \
+             físicos (Ryzen 5 5500U), así que cada ejecución hace menos iteraciones que si estuviera sola. Por usar tiempo de \
+             reloj, este experimento **no es reproducible exactamente**: el número de iteraciones depende de la carga de la \
+             máquina.",
+            n * cfg.alphas() * 2 * cfg.runs,
+            rayon::current_num_threads()
+        ),
+        Budget::Iterations(k) => format!(
+            "cada una de {k} iteraciones** (construcciones aleatorias). Con un número fijo de iteraciones el experimento es \
+             reproducible."
+        ),
+    };
 
     let mut md = String::new();
     let mut w = |s: String| {
@@ -358,11 +408,8 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
          - **Rejilla:** nuestro experimento principal ([`informe_busqueda_local.md`](informe_busqueda_local.md)): 21 α, \
          10 ejecuciones de 10 iteraciones por α y aleatorización, élite y búsqueda local.\n\
          - **{ts}:** para cada instancia, {alpha_text}, con **{runs} ejecuciones de GRASP {g0} (β = {beta}) y {runs} {g1} \
-         (τ = {tau}) por α, cada una iterando durante {time} s de reloj**.{seeds_text} Después, élite con las mismas reglas \
-         que la rejilla ({elite_text}; con empates y sin duplicados) y búsqueda local (2-opt + inserción). Las {jobs} \
-         ejecuciones se reparten entre {threads} hilos en un equipo de 6 núcleos físicos (Ryzen 5 5500U), así que cada \
-         ejecución hace menos iteraciones que si estuviera sola. Por usar tiempo de reloj, este experimento **no es \
-         reproducible exactamente**: el número de iteraciones depende de la carga de la máquina. Tardó {seconds:.0} s.\n\
+         (τ = {tau}) por α, {run_text}{seeds_text} Después, élite con las mismas reglas que la rejilla ({elite_text}; con \
+         empates y sin duplicados) y búsqueda local (2-opt + inserción). Tardó {seconds:.0} s.\n\
          - **Origen:** de qué élite sale la solución final; si una ejecución de GRASP repite una determinista, cuenta como \
          determinista.\n\
          - **¿La búsqueda local mejora?** Sí, si la final supera a la mejor sin búsqueda local de la instancia. *Antes* e \
@@ -370,9 +417,6 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
         runs = cfg.runs,
         beta = cfg.methods[0].param(),
         tau = cfg.methods[1].param(),
-        time = cfg.time,
-        jobs = n * cfg.alphas() * 2 * cfg.runs,
-        threads = rayon::current_num_threads(),
         seconds = input.seconds
     ));
     w(String::new());
@@ -404,10 +448,9 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
     }
     w(String::new());
     w(format!(
-        "*Una ejecución (media)* es lo comparable con Panadero con 1 hilo: lo que da, de media, una sola ejecución de {} s con \
-         el mejor α. La distancia media por instancia es la medida de la fila *Average* de las tablas del paper; la del total \
-         da más peso a las instancias con más recompensa.",
-        cfg.time
+        "*Una ejecución (media)* es lo que da, de media, una sola ejecución de {budget} con el mejor α (con 1 s es lo comparable \
+         con Panadero con 1 hilo). La distancia media por instancia es la medida de la fila *Average* de las tablas del paper; \
+         la del total da más peso a las instancias con más recompensa."
     ));
     w(String::new());
     let cmp_line = |name: &str, v: &dyn Fn(&Row) -> f64, against: &dyn Fn(&Row) -> f64| {
@@ -442,13 +485,14 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
         let v: Vec<f64> = rows.iter().filter(|r| r.inst.set() == set).map(|r| r.timed.mean_iterations()).collect();
         v.iter().sum::<f64>() / v.len().max(1) as f64
     };
-    w(format!(
-        "- **Iteraciones en {} s** (media por ejecución, con los {} hilos ocupados): {:.0} en p1 y {:.0} en p2, frente a las 10 de la rejilla.",
-        cfg.time,
-        rayon::current_num_threads(),
-        iters("p1"),
-        iters("p2")
-    ));
+    if let Budget::Seconds(t) = cfg.budget {
+        w(format!(
+            "- **Iteraciones en {t} s** (media por ejecución, con los {} hilos ocupados): {:.0} en p1 y {:.0} en p2, frente a las 10 de la rejilla.",
+            rayon::current_num_threads(),
+            iters("p1"),
+            iters("p2")
+        ));
+    }
     w(String::new());
 
     w(format!("## Según el origen de la solución final de {ts}"));

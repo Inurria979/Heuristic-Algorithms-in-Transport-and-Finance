@@ -39,14 +39,14 @@
 //!       GRASP on one instance: the best routes found
 //!   pjs grasp [GRASP] [--png-dir DIR] <data_dir> <out.csv>
 //!       GRASP on every instance, one CSV row each
-//!   pjs panadero [--alpha best|grid] [--time S] [--runs R] [--geometric B] [--softmax T] [--seed S]
+//!   pjs panadero [--alpha best|grid] [--time S | --iters N] [--runs R] [--geometric B] [--softmax T] [--seed S]
 //!                [--best-csv FILE] [--report FILE.md] <data_dir> <panadero.csv> <best_solution.csv> <out_dir>
 //!       only for the instances of the paper's tables: with the best grid alpha (default) or
 //!       every alpha of the grid, R GRASP runs (default 10) per alpha and randomisation lasting
-//!       S seconds of wall-clock time each (default 1), elite and local search; writes
-//!       <out_dir>/panadero_1s[_grid].csv and <out_dir>/panadero_1s[_grid]_runs.csv and the
-//!       report comparing the paper, the grid (best_solution.csv), this experiment and, with
-//!       --best-csv, the results of --alpha best (panadero_1s.csv)
+//!       S seconds of wall-clock time each (default 1) or N iterations each, elite and local
+//!       search; writes <out_dir>/panadero_<1s|Nit>[_grid].csv and ..._runs.csv and the report
+//!       comparing the paper, the grid (best_solution.csv), this experiment and, with
+//!       --best-csv, another run of this command (e.g. panadero_1s.csv)
 //!   GRASP options:
 //!     --alpha A|best   alpha of the enriched savings (default best: the best of the grid)
 //!     --geometric B    arc position ~ Geom(B) (default, B = 0.3 as in the paper)
@@ -446,10 +446,10 @@ fn panadero_all(paths: [&Path; 4], cfg: &panadero::TimedConfig, report: Option<&
     io::write_file(&runs_path, &runs)?;
     let best: f64 = ls.instances.iter().map(|ie| ie.elite[ie.best()].after.reward).sum();
     println!(
-        "{} instances x {} GRASP runs of {} s (wall clock) in {seconds:.1} s on {} threads; total reward after local search {best}",
+        "{} instances x {} GRASP runs of {} in {seconds:.1} s on {} threads; total reward after local search {best}",
         instances.len(),
         timed.first().map_or(0, |t| t.runs.len()),
-        cfg.time,
+        cfg.budget.label(),
         rayon::current_num_threads()
     );
     println!("-> {}\n-> {}", per_path.display(), runs_path.display());
@@ -457,9 +457,9 @@ fn panadero_all(paths: [&Path; 4], cfg: &panadero::TimedConfig, report: Option<&
         let p = |path: &Path| path.display().to_string().replace('\\', "/");
         let extra = best_csv.map(|b| format!(" --best-csv {}", p(b))).unwrap_or_default();
         let cmd = format!(
-            "ignore/target/release/pjs.exe panadero --alpha {} --time {} --runs {} --geometric {} --softmax {} --seed {}{extra} \\\n    --report {} {} {} {} {}",
+            "ignore/target/release/pjs.exe panadero --alpha {} {} --runs {} --geometric {} --softmax {} --seed {}{extra} \\\n    --report {} {} {} {} {}",
             if cfg.grid { "grid" } else { "best" },
-            cfg.time,
+            cfg.budget.flag(),
             cfg.runs,
             cfg.methods[0].param(),
             cfg.methods[1].param(),
@@ -496,7 +496,7 @@ fn usage(msg: &str) -> ! {
     eprintln!(
         "usage: pjs grid [GRID] [--png out.png] <instance.txt>\n       \
          pjs grid [GRID] [--png-dir DIR] [--report FILE.md] [--ls-png-dir DIR] [--ls-report FILE.md] <data_dir> <out_dir>\n       \
-         pjs panadero [--alpha best|grid] [--time S] [--runs R] [--geometric B] [--softmax T] [--seed S] [--best-csv FILE] [--report FILE.md] <data_dir> <panadero.csv> <best_solution.csv> <out_dir>\n       \
+         pjs panadero [--alpha best|grid] [--time S | --iters N] [--runs R] [--geometric B] [--softmax T] [--seed S] [--best-csv FILE] [--report FILE.md] <data_dir> <panadero.csv> <best_solution.csv> <out_dir>\n       \
          pjs grasp [GRASP] [--png out.png] <instance.txt>\n       \
          pjs grasp [GRASP] [--png-dir DIR] <data_dir> <out.csv>\n\
          GRID: --reps R  --iters N  --geometric BETA  --softmax TAU  --seed S\n\
@@ -577,9 +577,16 @@ fn main() {
             };
             let beta = parse_flag(&mut args, "--geometric", |b: &f64| *b > 0.0 && *b < 1.0, "a beta in (0, 1)").unwrap_or(0.3);
             let tau = parse_flag(&mut args, "--softmax", |t: &f64| *t > 0.0, "a temperature > 0").unwrap_or(1.0);
+            let time = parse_flag(&mut args, "--time", |t: &f64| *t > 0.0, "seconds > 0");
+            let iters = parse_flag(&mut args, "--iters", |n: &usize| *n > 0, "a number of iterations > 0");
+            let budget = match (time, iters) {
+                (Some(_), Some(_)) => usage("choose --time or --iters, not both"),
+                (_, Some(n)) => panadero::Budget::Iterations(n),
+                (t, None) => panadero::Budget::Seconds(t.unwrap_or(1.0)),
+            };
             let cfg = panadero::TimedConfig {
                 grid,
-                time: parse_flag(&mut args, "--time", |t: &f64| *t > 0.0, "seconds > 0").unwrap_or(1.0),
+                budget,
                 runs: parse_flag(&mut args, "--runs", |r: &usize| *r > 0, "a number of runs > 0").unwrap_or(10),
                 methods: [Randomization::Geometric { beta }, Randomization::Softmax { tau }],
                 seed: parse_flag(&mut args, "--seed", |_: &u64| true, "an integer seed").unwrap_or(1),

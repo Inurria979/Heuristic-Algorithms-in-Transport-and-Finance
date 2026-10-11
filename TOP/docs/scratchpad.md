@@ -235,6 +235,29 @@ $E panadero --alpha grid --best-csv results/panadero_1s.csv --report docs/compar
     src/data/top-data src/data/panadero2021_p1_p2.csv results/best_solution.csv results
 ```
 
+**Resultado (2 801 s ≈ 47 min):**
+
+- **Distancia media al BKS: 0.15 %.** Es la mejor de todas: la rejilla de 10 iteraciones da 0.35 %, Panadero con 128 hilos 0.45 % y 1 s con el mejor α 0.72 %.
+- **BKS alcanzado en 76 de 80 instancias.** Solo se quedan cortas p1.2.i, p1.2.l, p1.2.m y p1.3.l, que son también las 4 en las que pierde frente a Panadero con 128 hilos. Le gana en 12 instancias y empata en 64.
+- **Frente a la rejilla final:** mejor en 5 instancias e igual en 75. Frente a 1 s con el mejor α: mejor en 14 e igual en 66.
+- **Las 33 600 ejecuciones:** ninguna peor que su equivalente de 10 iteraciones y 12 996 mejores, como corresponde a semillas compartidas.
+- **Iteraciones por ejecución:** unas 40 600 en p1 y unas 56 200 en p2.
+
+**Variante con iteraciones fijas** (`--iters N` en lugar de `--time`, 12-10-2026). Es reproducible.
+
+- **Comprobación:** `--alpha grid --iters 10` reproduce exactamente la rejilla principal en las 80 instancias (0 diferencias en `best_no_ls` y `best_ls`).
+- **Con `--iters 100`** (29 s):
+  - distancia media al BKS del **0.29 %**, frente al 0.35 % con 10 iteraciones y el 0.15 % con 1 s;
+  - BKS en 73 de 80 instancias;
+  - frente a la rejilla de 10 iteraciones: mejor en 2, igual en 77 y peor en 1 (p1.4.r: 205 frente a 210).
+- **Por qué p1.4.r empeora**, aunque ninguna de las 33 600 ejecuciones es peor que su equivalente de 10 iteraciones: la élite se elige por la recompensa antes de la búsqueda local. Con 10 iteraciones, el 210 salía de una élite softmax que antes de la búsqueda local solo valía 165. Con 100 iteraciones esa ejecución cambia y la búsqueda local ya no llega a 210. La búsqueda local no es monótona respecto a la calidad de partida.
+- **Salidas:** `results/panadero_100it_grid.csv`, `results/panadero_100it_grid_runs.csv` y `docs/comparacion_panadero_rejilla_100it.md` (con `--best-csv results/panadero_1s_grid.csv`).
+
+```
+$E panadero --alpha grid --iters 100 --best-csv results/panadero_1s_grid.csv --report docs/comparacion_panadero_rejilla_100it.md \
+    src/data/top-data src/data/panadero2021_p1_p2.csv results/best_solution.csv results
+```
+
 **Comprobación:** con 0,01 s, de 6 720 ejecuciones emparejadas con la rejilla solo 2 salieron peores, y fue porque hicieron menos de 10 iteraciones (arranque de los hilos). Las que llegan a 10 iteraciones nunca son peores, como corresponde a semillas compartidas.
 
 **Aviso:** `docs/comparacion_panadero.md` (modo best) se generó con la versión anterior del informe, con una columna α distinta y otro título. Regenerarlo cambiaría las cifras, porque usa tiempo de reloj.
