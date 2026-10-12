@@ -18,6 +18,32 @@ ejecuta y qué falta. El informe con resultados está en [`informe_alpha.md`](in
 - [`busqueda_local_diseno.md`](busqueda_local_diseno.md): las decisiones acordadas y el pseudocódigo.
 - [`informe_busqueda_local.md`](informe_busqueda_local.md): los resultados, generado por `pjs grid`.
 
+**Síntesis y presentación** (12-10-2026):
+
+- [`metodos_y_comparacion_panadero.md`](metodos_y_comparacion_panadero.md): los tres métodos (determinista con rejilla de α, GRASP con 10 it / 100 it / 1 s, GRASP + búsqueda local) y cada uno comparado con Panadero en las 81 instancias de p1/p2 y, por conjuntos, en los siete. Escrito a mano; tres cifras (determinista sola, deterministas + búsqueda local y una ejecución de 10 it) se calcularon con PowerShell a partir de los CSV, no las genera `pjs`.
+- `TOP_savings_grasp_local_search.pptx`: la presentación, en inglés, con el estilo de `DTOP/docs/TOP_presentation_v2.pptx` y guion en español en las notas. Se genera con `TOP/ignore/slides/build_deck.py` (python-pptx, fuera del flujo de Rust y sin subir):
+
+  ```
+  cd TOP/ignore/slides
+  uv run --no-project --with python-pptx --with pillow python build_deck.py
+  ```
+
+  El guion completo, en español y diapositiva a diapositiva, está en [`guion_presentacion.md`](guion_presentacion.md); las notas del orador del `.pptx` son un resumen de él. Las 16 diapositivas, en orden: portada, el TOP, PJS, la regla de α, GRASP, búsqueda local, pseudocódigo por instancia, por qué Rust, resultados en 353 instancias, ejemplo p4.3.k, ganancia por conjunto, p1 y p2 instancia a instancia frente a Panadero, los siete conjuntos frente a la figura 4 de Panadero, muchos α frente a más iteraciones, conclusiones y una de reserva con la tabla de todas las variantes. Si PowerPoint tiene el fichero abierto, el script no puede sobrescribirlo.
+- **BKS de todas las instancias** (12-10-2026): `src/data/bks_chao.csv` (353 instancias factibles), sacado de la columna BEST de `MA10-PSOMA-PSOiA-Chao-benchmark.xls`, dentro de `solutions-psoia.zip` (Dang, Guibadj y Moukrim, https://www.utc.fr/~moukrim/dokuwiki/_media/en/solutions-psoia.zip; copia en `ignore/downloads/`). En las 81 instancias de Panadero coincide con su BKS (Ke et al., 2016). El zip también trae una solución con rutas para cada una de las 387 instancias.
+- **`pjs bks`** (módulo `bks.rs`) compara la rejilla con ese BKS por conjunto y frente a la figura 4 de Panadero (medias con 128 hilos; el paper no da p3–p7 por instancia):
+
+  ```
+  ignore/target/release/pjs.exe bks --report docs/comparacion_bks_conjuntos.md src/data/bks_chao.csv results/best_solution.csv results/bks_by_set.csv
+  ```
+
+  Distancia media de la final (10 it + búsqueda local) frente a Panadero 128: p1 0.58/0.69, p2 0.00/0.11, p3 0.67/1.44, p4 5.87/7.97, p5 1.30/1.46, p6 1.17/1.42, p7 3.42/5.10; todas 2.04/2.85 (media de la figura 4 ponderada por instancias). BKS alcanzado en 189 de 353 y ninguna por encima del BKS.
+- **Errata del paper, corregida el 12-10-2026:** la fila de p2.4.a sale en la tabla 4 como "p2.4.1" y se había perdido al extraer `panadero2021_p1_p2.csv`. Ya está: las comparaciones con p1/p2 son sobre **81** instancias. p2.4.a es trivial (un solo cliente cabe en tmax, recompensa 10 = BKS) y todo método da 10.
+- **`pjs panadero --resume`** (12-10-2026): conserva las filas que ya hay en `<stem>.csv` y `<stem>_runs.csv` y ejecuta solo las instancias de la tabla que faltan; el informe se genera siempre desde los CSV (`panadero::outcomes`). Así se añadió p2.4.a sin repetir las 80 (2 s, 35 s y 0 s en los tres modos). Al reanudar, los CSV en formato antiguo (`k` en vez de `best_k`, `seconds_limit` en vez de `budget`) se pasan al actual sin cambiar valores. El informe suma los tiempos y anota qué instancias se añadieron. Comprobado: con la referencia de 80, regenerar desde los CSV da las mismas cifras que los informes subidos (los de 1 s cambian solo de redacción, porque se generaron con una versión anterior del código).
+  ```
+  $E panadero [--alpha grid] [--iters N] [--best-csv ...] --resume --report docs/<informe>.md src/data/top-data src/data/panadero2021_p1_p2.csv results/best_solution.csv results
+  ```
+- **La regla de α de Panadero** ("α cerca de 0 con recompensas heterogéneas, cerca de 1 con homogéneas", sección 4) **no se cumple en Chao**. El CV de las recompensas es el mismo en todo un conjunto, así que solo hay 7 puntos. Entre CV y α óptimo la correlación es de +0.19 en 285 instancias no triviales, con el signo contrario al del paper. α = 0 da solo el 68 % de la mejor en p4, el conjunto más heterogéneo. Está en la diapositiva 4; todavía no está en ningún informe generado por `pjs`.
+
 Papers, en `docs/`; su texto extraído está en `ignore/papers_txt/`, con las letras griegas intactas:
 
 - **Panadero et al. (2021)**, *Applied Sciences* 11, 12092 (`applsci-11-12092-v2.pdf`). Es el paper base.
@@ -52,6 +78,7 @@ Papers, en `docs/`; su texto extraído está en `ignore/papers_txt/`, con las le
 | `ls_report.rs` | El informe Markdown `docs/informe_busqueda_local.md` |
 | `panadero.rs` | El subcomando `pjs panadero`: experimento de 1 s por ejecución con el mejor α, élite y búsqueda local, y la comparación con las tablas 3 y 4 de Panadero (`docs/comparacion_panadero.md`) |
 | `io.rs` | Cargar las instancias de una carpeta y escribir ficheros |
+| `bin/verify_routes.rs` | Binario aparte, `verify_routes`: comprobación independiente de `results/best_routes.csv`. No comparte código con `pjs` (no hay `lib.rs`): lee las instancias con su propio parser y recalcula las distancias con `hypot` |
 | `main.rs` | La línea de comandos, con los subcomandos `grid` y `grasp` |
 
 **Compilación**, siempre desde `TOP/src/rust`, para que se lean `rust-toolchain.toml` y `.cargo/config.toml`:
@@ -59,7 +86,8 @@ Papers, en `docs/`; su texto extraído está en `ignore/papers_txt/`, con las le
 ```
 cd TOP/src/rust
 cargo build --release      # ejecutable: TOP/ignore/target/release/pjs.exe
-cargo test --release       # tests de los selectores, la búsqueda local y la elección de élite
+cargo test --release       # tests de los selectores, la búsqueda local, la elección de élite y verify_routes
+                           # (dos ejecutables: pjs.exe y verify_routes.exe; `cargo run` lanza pjs)
 ```
 
 Decisiones de entorno y por qué:
@@ -166,6 +194,7 @@ La búsqueda local siempre se ejecuta. `--ls-png-dir` y `--ls-report` son opcion
   - `docs/informe_alpha.md`.
   - `results/local_search.csv`: una fila por élite, con la recompensa y el tiempo antes y después, los movimientos 2-opt y los clientes insertados.
   - `results/best_solution.csv`: una fila por instancia, con la determinista, GRASP, la determinista con búsqueda local, la final y su origen.
+  - `results/best_routes.csv` (desde el 12-10-2026): una fila por ruta de la solución final, con la recompensa, el tiempo y la secuencia de clientes (índices de nodo del fichero, separados por espacios; origen y destino implícitos). Es la entrada de `verify_routes`.
   - `results/figures/routes_ls/<instancia>.png` (59 MB) y `docs/informe_busqueda_local.md`.
 - **Con una sola instancia:** `$E grid src/data/top-data/p4.4.t.txt [--png out.png]` imprime una tabla por α, las rutas y una tabla de las élite antes y después de la búsqueda local.
 
@@ -202,18 +231,18 @@ Por defecto: `--alpha best` (el mejor α determinista de la rejilla), geométric
 
 - La búsqueda local mejora el 93.6 % de las élite, con una media del +18 % e inserta 7.5 clientes de media. Donde más aporta es en p4 (+28 % sobre GRASP) y en p7 (+18.5 %).
 - En 163 de 353 instancias la mejor final sale de una élite que **no** era la mejor antes de la búsqueda local.
-- **Frente a Panadero** (tablas 3 y 4, 80 instancias de p1/p2), detallado en [`comparacion_panadero.md`](comparacion_panadero.md):
-  - ninguna solución supera el BKS y 72 lo igualan;
-  - distancia media al BKS por instancia, la medida del paper: **0.35 % la nuestra**, 0.45 % Panadero con 128 hilos y 1.75 % con 1 hilo;
+- **Frente a Panadero** (tablas 3 y 4, 81 instancias de p1/p2), detallado en [`comparacion_panadero.md`](comparacion_panadero.md):
+  - ninguna solución supera el BKS y 73 lo igualan;
+  - distancia media al BKS por instancia, la medida del paper: **0.34 % la nuestra**, 0.44 % Panadero con 128 hilos y 1.73 % con 1 hilo;
   - frente a Panadero con 128 hilos, la nuestra es mejor en 10 instancias, igual en 64 y peor en 6;
   - **cómo se genera:** los datos del paper están extraídos en `src/data/panadero2021_p1_p2.csv`, y la comparación la escribe `pjs panadero` (en Rust).
 
-**Experimento de 1 s como Panadero** (`pjs panadero`, 12-10-2026), sobre las 80 instancias de sus tablas:
+**Experimento de 1 s como Panadero** (`pjs panadero`, 12-10-2026), sobre las 81 instancias de sus tablas:
 
 - **Configuración:** el mejor α de la rejilla y 10 ejecuciones geométricas más 10 softmax, de **1 s de reloj** cada una, en paralelo con 12 hilos. Después, élite (la determinista y las 3 mejores ejecuciones de cada tipo) y búsqueda local. Tarda 134 s.
 - **No es reproducible exactamente**, porque usa tiempo de reloj; el usuario lo eligió así a sabiendas.
 - **Iteraciones por ejecución:** unas 39 000 en p1 y unas 50 000 en p2.
-- **Resultado:** distancia media al BKS del **0.72 %**, peor que la rejilla (0.35 %) y que Panadero con 128 hilos (0.45 %). Una sola ejecución de 1 s, sin búsqueda local, da de media un 2.4–2.5 %, frente al 1.75 % de Panadero con 1 hilo.
+- **Resultado:** distancia media al BKS del **0.71 %**, peor que la rejilla (0.34 %) y que Panadero con 128 hilos (0.44 %). Una sola ejecución de 1 s, sin búsqueda local, da de media un 2.3–2.5 %, frente al 1.73 % de Panadero con 1 hilo.
 - **Lectura:** con un solo α, miles de iteraciones rinden menos que las 21 α × 20 ejecuciones × 10 iteraciones de la rejilla. Probar varios α aporta más que iterar más con uno fijo.
 - **Salidas:** `results/panadero_1s.csv` (una fila por instancia), `results/panadero_1s_runs.csv` (una por ejecución) y `docs/comparacion_panadero.md`.
 
@@ -237,8 +266,8 @@ $E panadero --alpha grid --best-csv results/panadero_1s.csv --report docs/compar
 
 **Resultado (2 801 s ≈ 47 min):**
 
-- **Distancia media al BKS: 0.15 %.** Es la mejor de todas: la rejilla de 10 iteraciones da 0.35 %, Panadero con 128 hilos 0.45 % y 1 s con el mejor α 0.72 %.
-- **BKS alcanzado en 76 de 80 instancias.** Solo se quedan cortas p1.2.i, p1.2.l, p1.2.m y p1.3.l, que son también las 4 en las que pierde frente a Panadero con 128 hilos. Le gana en 12 instancias y empata en 64.
+- **Distancia media al BKS: 0.15 %.** Es la mejor de todas: la rejilla de 10 iteraciones da 0.34 %, Panadero con 128 hilos 0.44 % y 1 s con el mejor α 0.71 %.
+- **BKS alcanzado en 77 de 81 instancias.** Solo se quedan cortas p1.2.i, p1.2.l, p1.2.m y p1.3.l, que son también las 4 en las que pierde frente a Panadero con 128 hilos. Le gana en 12 instancias y empata en 65.
 - **Frente a la rejilla final:** mejor en 5 instancias e igual en 75. Frente a 1 s con el mejor α: mejor en 14 e igual en 66.
 - **Las 33 600 ejecuciones:** ninguna peor que su equivalente de 10 iteraciones y 12 996 mejores, como corresponde a semillas compartidas.
 - **Iteraciones por ejecución:** unas 40 600 en p1 y unas 56 200 en p2.
@@ -247,9 +276,9 @@ $E panadero --alpha grid --best-csv results/panadero_1s.csv --report docs/compar
 
 - **Comprobación:** `--alpha grid --iters 10` reproduce exactamente la rejilla principal en las 80 instancias (0 diferencias en `best_no_ls` y `best_ls`).
 - **Con `--iters 100`** (29 s):
-  - distancia media al BKS del **0.29 %**, frente al 0.35 % con 10 iteraciones y el 0.15 % con 1 s;
-  - BKS en 73 de 80 instancias;
-  - frente a la rejilla de 10 iteraciones: mejor en 2, igual en 77 y peor en 1 (p1.4.r: 205 frente a 210).
+  - distancia media al BKS del **0.29 %**, frente al 0.34 % con 10 iteraciones y el 0.15 % con 1 s;
+  - BKS en 74 de 81 instancias;
+  - frente a la rejilla de 10 iteraciones: mejor en 2, igual en 78 y peor en 1 (p1.4.r: 205 frente a 210).
 - **Por qué p1.4.r empeora**, aunque ninguna de las 33 600 ejecuciones es peor que su equivalente de 10 iteraciones: la élite se elige por la recompensa antes de la búsqueda local. Con 10 iteraciones, el 210 salía de una élite softmax que antes de la búsqueda local solo valía 165. Con 100 iteraciones esa ejecución cambia y la búsqueda local ya no llega a 210. La búsqueda local no es monótona respecto a la calidad de partida.
 - **Salidas:** `results/panadero_100it_grid.csv`, `results/panadero_100it_grid_runs.csv` y `docs/comparacion_panadero_rejilla_100it.md` (con `--best-csv results/panadero_1s_grid.csv`).
 
@@ -265,6 +294,18 @@ $E panadero --alpha grid --iters 100 --best-csv results/panadero_1s_grid.csv --r
 **Verificaciones hechas:**
 
 - `Solution::check()` en cada solución, también después de la búsqueda local.
+- **Comprobación independiente de las rutas finales** (12-10-2026), con el binario aparte `verify_routes`:
+
+  ```
+  ignore/target/release/verify_routes.exe src/data/top-data results/best_routes.csv results/best_solution.csv
+  ```
+
+  - **Qué comprueba:** que cada nodo sea un cliente, que no haya clientes repetidos, que haya como mucho m rutas y que cada ruta quepa en tmax. Además, que la recompensa y el tiempo declarados y los totales de `best_solution.csv` cuadren.
+  - **Resultado:** 387 instancias, 1000 rutas y 9679 clientes, todo factible; la recompensa total es 189 854. Las diferencias entre los tiempos declarados y los recalculados son 0.
+  - **La ruta más ajustada** es la de p7.2.a, con holgura 0: es un cliente a 5 del depósito con tmax = 10, no una inserción.
+  - **Prueba en negativo:** tres copias estropeadas a mano (un cliente de más, un cliente repetido y el destino dentro de una ruta) las detecta todas, con código de salida 1.
+  - **Reproducibilidad:** al añadir `best_routes.csv`, una nueva ejecución de `pjs grid` dio `alpha_grid.csv`, `best_alpha.csv`, `local_search.csv` y `best_solution.csv` idénticos byte a byte, y `grasp_runs.csv` igual salvo la columna de segundos.
+  - **Alcance:** solo las soluciones finales de la rejilla. Las de `pjs panadero` y las demás élite no se exportan.
 - Al añadir la búsqueda local, `alpha_grid.csv` y `best_alpha.csv` salen idénticos, y `grasp_runs.csv`, idéntico salvo la columna de segundos.
 - Tests de la búsqueda local (cruce que el 2-opt deshace, inserción del mejor que cabe, desempate por menor tiempo, monotonía e idempotencia) y de `top_with_ties`.
 - Las 38 700 ejecuciones deterministas de la rejilla antigua comparadas con una implementación independiente en Python: 0 discrepancias.
@@ -283,7 +324,7 @@ $E panadero --alpha grid --iters 100 --best-csv results/panadero_1s_grid.csv --r
    - falta la fila de TOP en las tablas del README raíz y del `CLAUDE.md`;
    - hay que mover `src/data/top-data/` a `data/`, actualizando las rutas de los comandos.
 4. **Tamaño de `results/`:** unos 60 MB de PNG de rutas deterministas, otros 59 MB de rutas tras la búsqueda local y los 11 MB de `grasp_runs.csv`, y `results/` se sube a GitHub. Hay que decidir si va todo o solo una selección.
-5. **Commit:** la rejilla está en git (commit `b1f0fce`). La búsqueda local, sus documentos y sus resultados están sin commit.
+5. **Commit:** la rejilla, la búsqueda local y los experimentos de Panadero están en git (hasta `4905c63`). Faltan por subir `docs/metodos_y_comparacion_panadero.md`, la presentación y estas notas.
 6. ~~**Posible optimización:** compartir la lista de ahorros y la solución determinista entre las 20 ejecuciones de GRASP de cada (instancia, α).~~ **Descartada** tras medirla el 11-10-2026 (detalle en [`coste_lista_ahorros.md`](coste_lista_ahorros.md)):
    - la lista y la construcción determinista son solo el **3,5–5,4 %** de una ejecución de 10 iteraciones, tanto en p2 (21 nodos) como en p7 (102 nodos);
    - compartirlas ahorraría unos 6 s de los 140 s de la rejilla.

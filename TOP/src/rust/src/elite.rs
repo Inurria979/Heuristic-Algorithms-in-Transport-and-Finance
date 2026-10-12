@@ -210,6 +210,21 @@ pub fn best_solution_csv(instances: &[Instance], res: &GridResult, ls: &LsResult
     csv
 }
 
+/// best_routes.csv: the routes of the best solution of every instance, one row per route,
+/// for an outside check (src/bin/verify_routes.rs). `nodes` are the customers in visiting
+/// order, as 0-based node indices of the instance file separated by spaces; the source (0)
+/// and the sink (last node) are implicit. Times use the shortest exact representation.
+pub fn best_routes_csv(instances: &[Instance], ls: &LsResult) -> String {
+    let mut csv = String::from("instance,route,reward,time,nodes\n");
+    for (inst, ie) in instances.iter().zip(&ls.instances) {
+        for (i, r) in ie.elite[ie.best()].after.routes.iter().enumerate() {
+            let nodes: Vec<String> = r.nodes.iter().map(|k| k.to_string()).collect();
+            csv += &format!("{},{},{},{},{}\n", inst.name, i + 1, r.reward, r.time, nodes.join(" "));
+        }
+    }
+    csv
+}
+
 #[cfg(test)]
 mod tests {
     use super::top_with_ties;

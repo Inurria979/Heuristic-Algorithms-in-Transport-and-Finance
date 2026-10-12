@@ -10,12 +10,12 @@ ignore/target/release/pjs.exe panadero --alpha grid --time 1 --runs 10 --geometr
 
 ## Qué se compara
 
-Solo las 80 instancias de las tablas 3 y 4 de Panadero et al. (2021), extraídas en `src/data/panadero2021_p1_p2.csv`.
+Solo las 81 instancias de las tablas 3 y 4 de Panadero et al. (2021), extraídas en `src/data/panadero2021_p1_p2.csv`.
 
 - **BKS:** la mejor solución conocida de la literatura (columna [a] de las tablas).
 - **Panadero, 1 hilo / 128 hilos:** su algoritmo (ahorros con aleatorización sesgada, multiarranque), en el que cada hilo itera durante 1 s; con 128 hilos se queda con el mejor (*OBS*).
 - **Rejilla:** nuestro experimento principal ([`informe_busqueda_local.md`](informe_busqueda_local.md)): 21 α, 10 ejecuciones de 10 iteraciones por α y aleatorización, élite y búsqueda local.
-- **1 s, rejilla de α:** para cada instancia, **cada uno de los 21 α de la rejilla**, con **10 ejecuciones de GRASP geometric (β = 0.3) y 10 softmax (τ = 1) por α, cada una iterando durante 1 s de reloj**. Cada ejecución usa la misma semilla que en la rejilla, así que empieza igual que la de 10 iteraciones y sigue iterando. Después, élite con las mismas reglas que la rejilla (las deterministas de las 3 mejores α y, para cada α y aleatorización, las 3 mejores ejecuciones; con empates y sin duplicados) y búsqueda local (2-opt + inserción). Las 33600 ejecuciones se reparten entre 12 hilos en un equipo de 6 núcleos físicos (Ryzen 5 5500U), así que cada ejecución hace menos iteraciones que si estuviera sola. Por usar tiempo de reloj, este experimento **no es reproducible exactamente**: el número de iteraciones depende de la carga de la máquina. Tardó 2801 s.
+- **1 s, rejilla de α:** para cada instancia, **cada uno de los 21 α de la rejilla**, con **10 ejecuciones de GRASP geometric (β = 0.3) y 10 softmax (τ = 1) por α, cada una iterando durante 1 s de reloj**. Las 34020 ejecuciones se reparten entre 12 hilos en un equipo de 6 núcleos físicos (Ryzen 5 5500U), así que cada ejecución hace menos iteraciones que si estuviera sola. Por usar tiempo de reloj, este experimento **no es reproducible exactamente**: el número de iteraciones depende de la carga de la máquina. Cada ejecución usa la misma semilla que en la rejilla, así que empieza igual que la de 10 iteraciones y sigue iterando. Después, élite con las mismas reglas que la rejilla (las deterministas de las 3 mejores α y, para cada α y aleatorización, las 3 mejores ejecuciones; con empates y sin duplicados) y búsqueda local (2-opt + inserción). Tardó 2836 s. La instancia p2.4.a se añadió después con `--resume`, sin repetir las demás; el tiempo suma las dos ejecuciones.
 - **Origen:** de qué élite sale la solución final; si una ejecución de GRASP repite una determinista, cuenta como determinista.
 - **¿La búsqueda local mejora?** Sí, si la final supera a la mejor sin búsqueda local de la instancia. *Antes* e *Insertados* se refieren a la élite de la que sale la final.
 
@@ -23,34 +23,34 @@ Solo las 80 instancias de las tablas 3 y 4 de Panadero et al. (2021), extraídas
 
 | | Recompensa total | Distancia al BKS (sobre el total) | Distancia media al BKS por instancia (la del paper) |
 |---|---|---|---|
-| BKS | 10675 | — | — |
-| Panadero, 1 hilo | 10430 | 2.30 % | 1.75 % |
-| Panadero, 128 hilos | 10605 | 0.66 % | 0.45 % |
-| Rejilla: sin búsqueda local | 10385 | 2.72 % | 2.02 % |
-| Rejilla: final (con búsqueda local) | 10625 | 0.47 % | 0.35 % |
-| Mejor α (`panadero_1s.csv`): sin búsqueda local | 10460 | 2.01 % | 1.50 % |
-| Mejor α (`panadero_1s.csv`): final (con búsqueda local) | 10575 | 0.94 % | 0.72 % |
-| 1 s, rejilla de α: una ejecución geometric con el mejor α (media de 10), sin búsqueda local | 10334 | 3.19 % | 2.46 % |
-| 1 s, rejilla de α: una ejecución softmax con el mejor α (media de 10), sin búsqueda local | 10336 | 3.18 % | 2.32 % |
-| 1 s, rejilla de α: mejor de las 420 ejecuciones, sin búsqueda local | 10565 | 1.03 % | 0.72 % |
-| **1 s, rejilla de α: final (con búsqueda local)** | 10655 | 0.19 % | 0.15 % |
+| BKS | 10685 | — | — |
+| Panadero, 1 hilo | 10440 | 2.29 % | 1.73 % |
+| Panadero, 128 hilos | 10615 | 0.66 % | 0.44 % |
+| Rejilla: sin búsqueda local | 10395 | 2.71 % | 1.99 % |
+| Rejilla: final (con búsqueda local) | 10635 | 0.47 % | 0.34 % |
+| `panadero_1s.csv`: sin búsqueda local | 10470 | 2.01 % | 1.49 % |
+| `panadero_1s.csv`: final (con búsqueda local) | 10585 | 0.94 % | 0.71 % |
+| 1 s, rejilla de α: una ejecución geometric con el mejor α (media de 10), sin búsqueda local | 10344 | 3.19 % | 2.43 % |
+| 1 s, rejilla de α: una ejecución softmax con el mejor α (media de 10), sin búsqueda local | 10346 | 3.17 % | 2.29 % |
+| 1 s, rejilla de α: mejor de las 420 ejecuciones, sin búsqueda local | 10575 | 1.03 % | 0.71 % |
+| **1 s, rejilla de α: final (con búsqueda local)** | 10665 | 0.19 % | 0.15 % |
 
-*Una ejecución (media)* es lo comparable con Panadero con 1 hilo: lo que da, de media, una sola ejecución de 1 s con el mejor α. La distancia media por instancia es la medida de la fila *Average* de las tablas del paper; la del total da más peso a las instancias con más recompensa.
+*Una ejecución (media)* es lo que da, de media, una sola ejecución de 1 s con el mejor α (con 1 s es lo comparable con Panadero con 1 hilo). La distancia media por instancia es la medida de la fila *Average* de las tablas del paper; la del total da más peso a las instancias con más recompensa.
 
-- **1 s, rejilla de α final frente a Panadero con 128 hilos:** mejor en 12, igual en 64 y peor en 4 instancias.
-- **1 s, rejilla de α sin búsqueda local frente a Panadero con 128 hilos:** mejor en 4, igual en 66 y peor en 10 instancias.
-- **Rejilla final frente a Panadero con 128 hilos:** mejor en 10, igual en 64 y peor en 6 instancias.
-- **1 s, rejilla de α final frente a la rejilla final:** mejor en 5, igual en 75 y peor en 0 instancias.
-- **1 s, rejilla de α final frente a Mejor α (`panadero_1s.csv`) final:** mejor en 14, igual en 66 y peor en 0 instancias.
-- **BKS alcanzado:** 1 s, rejilla de α final en 76, rejilla final en 72, Panadero con 128 hilos en 68 de 80. Ninguna solución nuestra lo supera.
+- **1 s, rejilla de α final frente a Panadero con 128 hilos:** mejor en 12, igual en 65 y peor en 4 instancias.
+- **1 s, rejilla de α sin búsqueda local frente a Panadero con 128 hilos:** mejor en 4, igual en 67 y peor en 10 instancias.
+- **Rejilla final frente a Panadero con 128 hilos:** mejor en 10, igual en 65 y peor en 6 instancias.
+- **1 s, rejilla de α final frente a la rejilla final:** mejor en 5, igual en 76 y peor en 0 instancias.
+- **1 s, rejilla de α final frente a `panadero_1s.csv` final:** mejor en 14, igual en 67 y peor en 0 instancias.
+- **BKS alcanzado:** 1 s, rejilla de α final en 77, rejilla final en 73, Panadero con 128 hilos en 69 de 81. Ninguna solución nuestra lo supera.
 - **La búsqueda local mejora** la mejor solución de 1 s, rejilla de α en 13 instancias; en 6 de ellas es lo que hace alcanzar o superar a Panadero con 128 hilos.
-- **Iteraciones en 1 s** (media por ejecución, con los 12 hilos ocupados): 40563 en p1 y 56189 en p2, frente a las 10 de la rejilla.
+- **Iteraciones en 1 s** (media por ejecución, con los 12 hilos ocupados): 40563 en p1 y 63600 en p2, frente a las 10 de la rejilla.
 
 ## Según el origen de la solución final de 1 s, rejilla de α
 
 | Origen | Instancias | La búsqueda local mejora | Mejor que Panadero 128 | Igual | Peor |
 |---|---|---|---|---|---|
-| determinista | 53 | 0 | 2 | 50 | 1 |
+| determinista | 54 | 0 | 2 | 51 | 1 |
 | geometric | 20 | 7 | 7 | 10 | 3 |
 | softmax | 7 | 6 | 3 | 4 | 0 |
 
@@ -58,7 +58,7 @@ Solo las 80 instancias de las tablas 3 y 4 de Panadero et al. (2021), extraídas
 
 *α* es el de la élite de la que sale la solución final.
 
-| Instancia | BKS | Panadero 1 hilo | Panadero 128 hilos | Rejilla final | Mejor α (`panadero_1s.csv`) final | 1 s, rejilla de α sin búsqueda local | **1 s, rejilla de α final** | Origen | α | Ejecución | Antes | Insertados | ¿La búsqueda local mejora? | Frente a Panadero 128 | Frente a BKS | Iteraciones por ejecución |
+| Instancia | BKS | Panadero 1 hilo | Panadero 128 hilos | Rejilla final | `panadero_1s.csv` final | 1 s, rejilla de α sin búsqueda local | **1 s, rejilla de α final** | Origen | α | Ejecución | Antes | Insertados | ¿La búsqueda local mejora? | Frente a Panadero 128 | Frente a BKS | Iteraciones por ejecución |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | p1.2.b | 15 | 15 | 15 | 15 | 15 | 15 | **15** | determinista | 0.00 | — | 15 | 0 | no | igual | igual | 201694 |
 | p1.2.c | 20 | 20 | 20 | 20 | 20 | 20 | **20** | determinista | 0.00 | — | 20 | 0 | no | igual | igual | 138236 |
@@ -130,6 +130,7 @@ Solo las 80 instancias de las tablas 3 y 4 de Panadero et al. (2021), extraídas
 | p2.3.i | 200 | 200 | 200 | 200 | 200 | 200 | **200** | determinista | 0.60 | — | 200 | 0 | no | igual | igual | 25407 |
 | p2.3.j | 200 | 200 | 200 | 200 | 200 | 200 | **200** | determinista | 0.00 | — | 200 | 0 | no | igual | igual | 25573 |
 | p2.3.k | 200 | 200 | 200 | 200 | 200 | 200 | **200** | determinista | 0.00 | — | 200 | 0 | no | igual | igual | 26063 |
+| p2.4.a | 10 | 10 | 10 | 10 | 10 | 10 | **10** | determinista | 0.00 | — | 10 | 0 | no | igual | igual | 300750 |
 | p2.4.b | 70 | 70 | 70 | 70 | 70 | 70 | **70** | determinista | 0.00 | — | 70 | 0 | no | igual | igual | 117157 |
 | p2.4.c | 70 | 70 | 70 | 70 | 70 | 70 | **70** | determinista | 0.00 | — | 70 | 0 | no | igual | igual | 121499 |
 | p2.4.d | 70 | 70 | 70 | 70 | 70 | 70 | **70** | determinista | 0.00 | — | 70 | 0 | no | igual | igual | 121066 |

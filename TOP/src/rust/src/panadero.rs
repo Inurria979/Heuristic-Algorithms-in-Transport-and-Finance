@@ -11,11 +11,11 @@
 //! Writes a CSV per instance, a CSV per run and a Markdown report (in Spanish).
 
 use crate::alpha_grid::{best_grid_k, grid_alpha, ALPHAS};
-use crate::elite::{drop_duplicates, origin_text, search_all, top_with_ties, Candidate, InstanceElite, LsResult, Origin};
+use crate::elite::{drop_duplicates, origin_text, search_all, top_with_ties, Candidate, LsResult, Origin};
 use crate::grasp::{grasp, stream_seed, GraspConfig, GraspResult, Randomization};
 use crate::heuristic::pjs;
 use crate::io::write_file;
-use crate::model::{Instance, Solution};
+use crate::model::{set_of, Instance, Solution};
 use crate::report::gain;
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -140,7 +140,7 @@ fn columns(header: &str, path: &Path, names: &[&str]) -> Result<Vec<usize>, Stri
 }
 
 /// Numeric fields of every data row of a CSV, by column name, keyed by the first field.
-fn read_csv(path: &Path, names: &[&str]) -> Result<Vec<(String, Vec<f64>)>, String> {
+pub fn read_csv(path: &Path, names: &[&str]) -> Result<Vec<(String, Vec<f64>)>, String> {
     let text = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
     let mut lines = text.lines().filter(|l| !l.trim().is_empty());
     let idx = columns(lines.next().unwrap_or_default(), path, names)?;
@@ -241,12 +241,145 @@ fn versus(a: f64, b: f64) -> String {
     }
 }
 
+/// What the report needs from the timed experiment on one instance. It is read back from
+/// the two CSVs (`<stem>.csv` and `<stem>_runs.csv`), so that a report can be rebuilt after
+/// adding instances with --resume, without running the others again.
+pub struct Outcome {
+    pub name: String,
+    /// Best reward without local search (deterministic or any run).
+    pub no_ls: f64,
+    /// Final reward, after the local search on the elite.
+    pub final_ls: f64,
+    /// Origin of the final solution: "deterministic" or the name of a randomisation.
+    pub origin: String,
+    /// Alpha index of that elite, its run ("" if deterministic), reward before the local
+    /// search and customers inserted.
+    pub k: usize,
+    pub rep: String,
+    pub before: f64,
+    pub inserted: usize,
+    /// Mean iterations per run.
+    pub mean_iterations: f64,
+    /// Mean reward of one run of each randomisation with the best deterministic alpha.
+    pub mean_run: [f64; 2],
+}
+
+/// Rows of a CSV text as maps column -> value (fields have no commas).
+fn csv_rows(text: &str) -> Vec<HashMap<&str, &str>> {
+    let mut lines = text.lines().filter(|l| !l.trim().is_empty());
+    let header: Vec<&str> = lines.next().unwrap_or_default().split(',').collect();
+    lines.map(|l| header.iter().copied().zip(l.split(',')).collect()).collect()
+}
+
+/// Field `col` of a CSV row, parsed.
+fn get<T: std::str::FromStr>(row: &HashMap<&str, &str>, col: &str) -> Result<T, String> {
+    let v = row.get(col).ok_or(format!("missing column '{col}'"))?;
+    v.parse().map_err(|_| format!("column '{col}': cannot parse '{v}'"))
+}
+
+/// Outcomes of every instance of `per` (one row per instance), in its order, with the run
+/// statistics taken from `runs` (one row per GRASP run).
+pub fn outcomes(per: &str, runs: &str, cfg: &TimedConfig) -> Result<Vec<Outcome>, String> {
+    let runs = csv_rows(runs);
+    csv_rows(per)
+        .iter()
+        .map(|row| {
+            let name: String = get(row, "instance")?;
+            let best_k: usize = get(row, "best_k")?;
+            let mine: Vec<&HashMap<&str, &str>> = runs.iter().filter(|r| r.get("instance") == Some(&name.as_str())).collect();
+            if mine.is_empty() {
+                return Err(format!("{name}: no runs in the runs CSV"));
+            }
+            let mut iterations = 0.0;
+            for r in &mine {
+                iterations += get::<f64>(r, "iterations")?;
+            }
+            let mut mean_run = [0.0; 2];
+            for (m, method) in cfg.methods.iter().enumerate() {
+                let group: Vec<f64> = mine
+                    .iter()
+                    .filter(|r| r.get("randomization") == Some(&method.name()) && get::<usize>(r, "k").ok() == Some(best_k))
+                    .map(|r| get(r, "reward"))
+                    .collect::<Result<_, String>>()?;
+                mean_run[m] = group.iter().sum::<f64>() / group.len().max(1) as f64;
+            }
+            Ok(Outcome {
+                no_ls: get(row, "best_no_ls")?,
+                final_ls: get(row, "best_ls")?,
+                origin: get(row, "origin")?,
+                k: get(row, "k")?,
+                rep: get(row, "rep")?,
+                before: get(row, "reward_before_ls")?,
+                inserted: get(row, "inserted")?,
+                mean_iterations: iterations / mine.len() as f64,
+                mean_run,
+                name,
+            })
+        })
+        .collect()
+}
+
+/// Bring CSVs written by an earlier version of this command (mode best only, before the
+/// grid mode existed) to the current columns, so that new rows can be merged with them:
+/// per instance, `k`/`alpha` (the only alpha tried, which is also the final elite's) become
+/// `best_k`/`best_alpha` and `k`/`alpha`; per run, `seconds_limit` T becomes `budget` "Ts".
+/// CSVs already in the current format are returned unchanged.
+pub fn upgrade_csvs(per: &str, runs: &str) -> (String, String) {
+    let per = if per.lines().next().is_some_and(|h| h.starts_with("instance,k,alpha,")) {
+        let mut out = String::from(
+            "instance,best_k,best_alpha,deterministic,best_no_ls,best_ls,origin,k,alpha,rep,reward_before_ls,inserted,mean_iterations,elite_selected,elite_kept\n",
+        );
+        for l in per.lines().skip(1).filter(|l| !l.trim().is_empty()) {
+            // instance,k,alpha,deterministic,best_no_ls,best_ls,origin,rep,...
+            let f: Vec<&str> = l.split(',').collect();
+            out += &format!("{},{},{},{},{},{}\n", f[0], f[1], f[2], f[3..7].join(","), [f[1], f[2]].join(","), f[7..].join(","));
+        }
+        out
+    } else {
+        per.to_string()
+    };
+    let runs = if runs.lines().next().is_some_and(|h| h.contains(",seconds_limit,")) {
+        let mut out = String::from("instance,k,alpha,randomization,param,rep,budget,iterations,best_iteration,reward,seconds\n");
+        for l in runs.lines().skip(1).filter(|l| !l.trim().is_empty()) {
+            let mut f: Vec<String> = l.split(',').map(String::from).collect();
+            f[6] = format!("{}s", f[6]);
+            out += &f.join(",");
+            out.push('\n');
+        }
+        out
+    } else {
+        runs.to_string()
+    };
+    (per, runs)
+}
+
+/// Merge two versions of a CSV keyed by its first column (same header): the rows of every
+/// instance come from `new` if it has them, else from `old`, in the order of `names`.
+pub fn merge_csv(old: &str, new: &str, names: &[&str]) -> String {
+    let header = old.lines().next().or(new.lines().next()).unwrap_or_default();
+    let key = |l: &str| l.split(',').next().unwrap_or_default().to_string();
+    let rows = |text: &str| -> HashMap<String, Vec<String>> {
+        let mut m: HashMap<String, Vec<String>> = HashMap::new();
+        for l in text.lines().skip(1).filter(|l| !l.trim().is_empty()) {
+            m.entry(key(l)).or_default().push(l.to_string());
+        }
+        m
+    };
+    let (old, new) = (rows(old), rows(new));
+    let mut out = format!("{header}\n");
+    for n in names {
+        for l in new.get(*n).or(old.get(*n)).into_iter().flatten() {
+            out += l;
+            out.push('\n');
+        }
+    }
+    out
+}
+
 /// Everything the report compares on one instance.
 struct Row<'a> {
     reference: &'a Reference,
-    inst: &'a Instance,
-    timed: &'a Timed,
-    elite: &'a InstanceElite,
+    o: &'a Outcome,
     grid_no_ls: f64,
     grid_ls: f64,
     /// Timed experiment with the best alpha (mode best), when comparing mode grid with it.
@@ -255,13 +388,17 @@ struct Row<'a> {
 
 impl Row<'_> {
     fn final_ls(&self) -> f64 {
-        self.elite.elite[self.elite.best()].after.reward
+        self.o.final_ls
+    }
+
+    fn no_ls(&self) -> f64 {
+        self.o.no_ls
     }
 
     /// Mean reward of one run of randomisation m with the best deterministic alpha (no
     /// local search): what a single run like Panadero's 1 thread gives.
-    fn mean_run(&self, m: usize, runs: usize) -> f64 {
-        self.timed.group(self.timed.best_pos(), m, runs).iter().map(|g| g.solution.reward).sum::<f64>() / runs as f64
+    fn mean_run(&self, m: usize) -> f64 {
+        self.o.mean_run[m]
     }
 }
 
@@ -328,23 +465,24 @@ pub struct ReportInputs<'a> {
     pub best_name: &'a str,
     pub seconds: f64,
     pub cmd: &'a str,
+    /// Instances added later with --resume (empty for a complete run).
+    pub added: &'a [String],
 }
 
 /// Write the Markdown report comparing the paper with our grid and our timed experiment.
-pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, cfg: &TimedConfig, input: &ReportInputs, report: &Path) -> Result<(), String> {
+pub fn write_comparison(outcomes: &[Outcome], cfg: &TimedConfig, input: &ReportInputs, report: &Path) -> Result<(), String> {
+    let by_name: HashMap<&str, &Outcome> = outcomes.iter().map(|o| (o.name.as_str(), o)).collect();
     let rows: Vec<Row> = input
         .refs
         .iter()
-        .zip(instances)
-        .zip(timed)
-        .zip(&ls.instances)
-        .map(|(((reference, inst), t), ie)| {
+        .map(|reference| {
+            let o = *by_name.get(reference.name.as_str()).ok_or(format!("{} has no result in the experiment's CSV", reference.name))?;
             let &(grid_no_ls, grid_ls) = input.grid.get(&reference.name).ok_or(format!("{} is not in best_solution.csv", reference.name))?;
             let best_1s = match input.best_1s {
                 Some(m) => Some(*m.get(&reference.name).ok_or(format!("{} is not in the best-alpha CSV", reference.name))?),
                 None => None,
             };
-            Ok(Row { reference, inst, timed: t, elite: ie, grid_no_ls, grid_ls, best_1s })
+            Ok(Row { reference, o, grid_no_ls, grid_ls, best_1s })
         })
         .collect::<Result<_, String>>()?;
     let with_best = input.best_1s.is_some();
@@ -409,7 +547,7 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
          10 ejecuciones de 10 iteraciones por α y aleatorización, élite y búsqueda local.\n\
          - **{ts}:** para cada instancia, {alpha_text}, con **{runs} ejecuciones de GRASP {g0} (β = {beta}) y {runs} {g1} \
          (τ = {tau}) por α, {run_text}{seeds_text} Después, élite con las mismas reglas que la rejilla ({elite_text}; con \
-         empates y sin duplicados) y búsqueda local (2-opt + inserción). Tardó {seconds:.0} s.\n\
+         empates y sin duplicados) y búsqueda local (2-opt + inserción). Tardó {seconds:.0} s.{added}\n\
          - **Origen:** de qué élite sale la solución final; si una ejecución de GRASP repite una determinista, cuenta como \
          determinista.\n\
          - **¿La búsqueda local mejora?** Sí, si la final supera a la mejor sin búsqueda local de la instancia. *Antes* e \
@@ -417,7 +555,16 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
         runs = cfg.runs,
         beta = cfg.methods[0].param(),
         tau = cfg.methods[1].param(),
-        seconds = input.seconds
+        seconds = input.seconds,
+        added = if input.added.is_empty() {
+            String::new()
+        } else {
+            let (which, verb) = if input.added.len() == 1 { ("La instancia", "se añadió") } else { ("Las instancias", "se añadieron") };
+            format!(
+                " {which} {} {verb} después con `--resume`, sin repetir las demás; el tiempo suma las dos ejecuciones.",
+                input.added.join(", ")
+            )
+        }
     ));
     w(String::new());
 
@@ -436,9 +583,9 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
         lines.push((format!("{tb}: final (con búsqueda local)"), Box::new(|r| r.best_1s.unwrap().1)));
     }
     lines.extend::<[(String, Box<dyn Fn(&Row) -> f64>); 4]>([
-        (format!("{ts}: una ejecución {g0} con el mejor α (media de {}), sin búsqueda local", cfg.runs), Box::new(|r| r.mean_run(0, cfg.runs))),
-        (format!("{ts}: una ejecución {g1} con el mejor α (media de {}), sin búsqueda local", cfg.runs), Box::new(|r| r.mean_run(1, cfg.runs))),
-        (format!("{ts}: mejor de las {} ejecuciones, sin búsqueda local", cfg.alphas() * 2 * cfg.runs), Box::new(|r| r.timed.no_ls())),
+        (format!("{ts}: una ejecución {g0} con el mejor α (media de {}), sin búsqueda local", cfg.runs), Box::new(|r| r.mean_run(0))),
+        (format!("{ts}: una ejecución {g1} con el mejor α (media de {}), sin búsqueda local", cfg.runs), Box::new(|r| r.mean_run(1))),
+        (format!("{ts}: mejor de las {} ejecuciones, sin búsqueda local", cfg.alphas() * 2 * cfg.runs), Box::new(|r| r.no_ls())),
         (format!("**{ts}: final (con búsqueda local)**"), Box::new(|r| r.final_ls())),
     ]);
     w(format!("| BKS | {} | — | — |", rows.iter().map(|r| r.reference.bks).sum::<f64>()));
@@ -462,7 +609,7 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
         )
     };
     w(cmp_line(&format!("{ts} final frente a Panadero con 128 hilos"), &|r| r.final_ls(), &|r| r.reference.thr128));
-    w(cmp_line(&format!("{ts} sin búsqueda local frente a Panadero con 128 hilos"), &|r| r.timed.no_ls(), &|r| r.reference.thr128));
+    w(cmp_line(&format!("{ts} sin búsqueda local frente a Panadero con 128 hilos"), &|r| r.no_ls(), &|r| r.reference.thr128));
     w(cmp_line("Rejilla final frente a Panadero con 128 hilos", &|r| r.grid_ls, &|r| r.reference.thr128));
     w(cmp_line(&format!("{ts} final frente a la rejilla final"), &|r| r.final_ls(), &|r| r.grid_ls));
     if with_best {
@@ -478,11 +625,11 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
     w(format!(
         "- **La búsqueda local mejora** la mejor solución de {ts} en {} instancias; en {} de ellas es lo que hace alcanzar o superar \
          a Panadero con 128 hilos.",
-        count(&|r| r.final_ls() > r.timed.no_ls()),
-        count(&|r| r.final_ls() > r.timed.no_ls() && r.timed.no_ls() < r.reference.thr128 && r.final_ls() >= r.reference.thr128)
+        count(&|r| r.final_ls() > r.no_ls()),
+        count(&|r| r.final_ls() > r.no_ls() && r.no_ls() < r.reference.thr128 && r.final_ls() >= r.reference.thr128)
     ));
     let iters = |set: &str| -> f64 {
-        let v: Vec<f64> = rows.iter().filter(|r| r.inst.set() == set).map(|r| r.timed.mean_iterations()).collect();
+        let v: Vec<f64> = rows.iter().filter(|r| set_of(&r.reference.name) == set).map(|r| r.o.mean_iterations).collect();
         v.iter().sum::<f64>() / v.len().max(1) as f64
     };
     if let Budget::Seconds(t) = cfg.budget {
@@ -499,18 +646,12 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
     w(String::new());
     w("| Origen | Instancias | La búsqueda local mejora | Mejor que Panadero 128 | Igual | Peor |".into());
     w("|---|---|---|---|---|---|".into());
-    let origin_of = |r: &Row| r.elite.elite[r.elite.best()].origin;
-    let groups: [(&str, Box<dyn Fn(Origin) -> bool>); 3] = [
-        ("determinista", Box::new(|o| o == Origin::Deterministic)),
-        (g0, Box::new(|o| matches!(o, Origin::Grasp { m: 0, .. }))),
-        (g1, Box::new(|o| matches!(o, Origin::Grasp { m: 1, .. }))),
-    ];
-    for (name, keep) in &groups {
-        let of = |v: &dyn Fn(&Row) -> bool| count(&|r| keep(origin_of(r)) && v(r));
+    for (name, origin) in [("determinista", "deterministic"), (g0, g0), (g1, g1)] {
+        let of = |v: &dyn Fn(&Row) -> bool| count(&|r| r.o.origin == origin && v(r));
         w(format!(
             "| {name} | {} | {} | {} | {} | {} |",
             of(&|_| true),
-            of(&|r| r.final_ls() > r.timed.no_ls()),
+            of(&|r| r.final_ls() > r.no_ls()),
             of(&|r| r.final_ls() > r.reference.thr128),
             of(&|r| r.final_ls() == r.reference.thr128),
             of(&|r| r.final_ls() < r.reference.thr128)
@@ -529,10 +670,8 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
     ));
     w(format!("|---|---|---|---|---|{best_sep}---|---|---|---|---|---|---|---|---|---|---|"));
     for r in &rows {
-        let b = &r.elite.elite[r.elite.best()];
-        let (origin, rep) = origin_text(b.origin, &cfg.methods);
-        let origin = if origin == "deterministic" { "determinista" } else { origin };
-        let (fin, nols) = (r.final_ls(), r.timed.no_ls());
+        let origin = if r.o.origin == "deterministic" { "determinista" } else { r.o.origin.as_str() };
+        let (fin, nols) = (r.final_ls(), r.no_ls());
         let best_cell = r.best_1s.map(|b| format!(" {} |", b.1)).unwrap_or_default();
         w(format!(
             "| {} | {} | {} | {} | {} |{best_cell} {nols} | **{fin}** | {origin} | {:.2} | {} | {} | {} | {} | {} | {} | {:.0} |",
@@ -541,14 +680,14 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
             r.reference.thr1,
             r.reference.thr128,
             r.grid_ls,
-            grid_alpha(b.k),
-            if rep.is_empty() { "—".to_string() } else { rep },
-            b.before.reward,
-            b.stats.inserted,
+            grid_alpha(r.o.k),
+            if r.o.rep.is_empty() { "—" } else { r.o.rep.as_str() },
+            r.o.before,
+            r.o.inserted,
             if fin > nols { format!("sí (+{})", fin - nols) } else { "no".into() },
             versus(fin, r.reference.thr128),
             if fin == r.reference.bks { "igual".to_string() } else { format!("{}", fin - r.reference.bks) },
-            r.timed.mean_iterations()
+            r.o.mean_iterations
         ));
     }
     w(String::new());
@@ -559,4 +698,35 @@ pub fn write_comparison(instances: &[Instance], timed: &[Timed], ls: &LsResult, 
     write_file(report, &md)?;
     println!("-> {}", report.display());
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{merge_csv, upgrade_csvs};
+
+    #[test]
+    fn merge_keeps_old_rows_adds_new_and_follows_the_reference_order() {
+        let old = "instance,v\na,1\na,2\nc,3\n";
+        let new = "instance,v\nb,9\n";
+        assert_eq!(merge_csv(old, new, &["a", "b", "c"]), "instance,v\na,1\na,2\nb,9\nc,3\n");
+        // a new row replaces the old rows of its instance
+        assert_eq!(merge_csv(old, "instance,v\nc,7\n", &["a", "c"]), "instance,v\na,1\na,2\nc,7\n");
+    }
+
+    #[test]
+    fn upgrade_old_best_mode_csvs() {
+        let per = concat!(
+            "instance,k,alpha,deterministic,best_no_ls,best_ls,origin,rep,reward_before_ls,inserted,mean_iterations,elite_selected,elite_kept\n",
+            "p1.2.b,3,0.15,15,20,25,geometric,4,20,1,9.5,21,2\n"
+        );
+        let runs = concat!(
+            "instance,k,alpha,randomization,param,rep,seconds_limit,iterations,best_iteration,reward,seconds\n",
+            "p1.2.b,3,0.15,geometric,0.3,0,1,200,5,20,1.0000\n"
+        );
+        let (p, r) = upgrade_csvs(per, runs);
+        assert_eq!(p.lines().nth(1), Some("p1.2.b,3,0.15,15,20,25,geometric,3,0.15,4,20,1,9.5,21,2"));
+        assert_eq!(r.lines().nth(1), Some("p1.2.b,3,0.15,geometric,0.3,0,1s,200,5,20,1.0000"));
+        // current format: unchanged
+        assert_eq!(upgrade_csvs(&p, &r), (p.clone(), r.clone()));
+    }
 }
