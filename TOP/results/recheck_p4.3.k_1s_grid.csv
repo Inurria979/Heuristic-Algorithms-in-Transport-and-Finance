@@ -1,0 +1,2 @@
+instance,best_k,best_alpha,deterministic,best_no_ls,best_ls,origin,k,alpha,rep,reward_before_ls,inserted,mean_iterations,elite_selected,elite_kept
+p4.3.k,8,0.40,614,702,880,geometric,11,0.55,4,627,21,343.8,214,99
