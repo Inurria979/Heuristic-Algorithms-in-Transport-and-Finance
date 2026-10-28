@@ -29,7 +29,7 @@ El detalle de cada parte está en otros documentos:
 ## 0. Cómo se compara en p1 y p2
 
 - **Instancias:** las 81 de las tablas 3 y 4 de Panadero, extraídas en
-  `src/data/panadero2021_p1_p2.csv`. En la tabla 4, p2.4.a aparece por errata como
+  `data/panadero2021_p1_p2.csv`. En la tabla 4, p2.4.a aparece por errata como
   "p2.4.1".
 - **BKS:** la mejor solución conocida de la literatura (columna [a] de sus tablas). Suma
   10 685 en las 81 instancias.
@@ -247,7 +247,7 @@ Para p3 a p7 el paper no publica valores por instancia, solo la distancia media 
 cada conjunto con 128 hilos (figura 4). Para compararnos:
 
 - **BKS de las 353 instancias factibles:** columna *BEST* de los resultados públicos de
-  PSOiA (Dang, Guibadj y Moukrim), en `src/data/bks_chao.csv`. En las 81 instancias de las
+  PSOiA (Dang, Guibadj y Moukrim), en `data/bks_chao.csv`. En las 81 instancias de las
   tablas de Panadero coincide exactamente con su BKS (Ke et al., 2016).
 - **Nuestros resultados:** la rejilla de 10 iteraciones con búsqueda local, la versión
   barata.

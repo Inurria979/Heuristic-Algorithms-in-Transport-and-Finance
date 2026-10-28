@@ -29,18 +29,18 @@ ejecuta y qué falta. El informe con resultados está en [`informe_alpha.md`](in
   ```
 
   El guion completo, en español y diapositiva a diapositiva, está en [`guion_presentacion.md`](guion_presentacion.md); las notas del orador del `.pptx` son un resumen de él. Las 16 diapositivas, en orden: portada, el TOP, PJS, la regla de α, GRASP, búsqueda local, pseudocódigo por instancia, por qué Rust, resultados en 353 instancias, ejemplo p4.3.k, ganancia por conjunto, p1 y p2 instancia a instancia frente a Panadero, los siete conjuntos frente a la figura 4 de Panadero, muchos α frente a más iteraciones, conclusiones y una de reserva con la tabla de todas las variantes. Si PowerPoint tiene el fichero abierto, el script no puede sobrescribirlo.
-- **BKS de todas las instancias** (12-10-2026): `src/data/bks_chao.csv` (353 instancias factibles), sacado de la columna BEST de `MA10-PSOMA-PSOiA-Chao-benchmark.xls`, dentro de `solutions-psoia.zip` (Dang, Guibadj y Moukrim, https://www.utc.fr/~moukrim/dokuwiki/_media/en/solutions-psoia.zip; copia en `ignore/downloads/`). En las 81 instancias de Panadero coincide con su BKS (Ke et al., 2016). El zip también trae una solución con rutas para cada una de las 387 instancias.
+- **BKS de todas las instancias** (12-10-2026): `data/bks_chao.csv` (353 instancias factibles), sacado de la columna BEST de `MA10-PSOMA-PSOiA-Chao-benchmark.xls`, dentro de `solutions-psoia.zip` (Dang, Guibadj y Moukrim, https://www.utc.fr/~moukrim/dokuwiki/_media/en/solutions-psoia.zip; copia en `ignore/downloads/`). En las 81 instancias de Panadero coincide con su BKS (Ke et al., 2016). El zip también trae una solución con rutas para cada una de las 387 instancias.
 - **`pjs bks`** (módulo `bks.rs`) compara la rejilla con ese BKS por conjunto y frente a la figura 4 de Panadero (medias con 128 hilos; el paper no da p3–p7 por instancia):
 
   ```
-  ignore/target/release/pjs.exe bks --report docs/comparacion_bks_conjuntos.md src/data/bks_chao.csv results/best_solution.csv results/bks_by_set.csv
+  ignore/target/release/pjs.exe bks --report docs/comparacion_bks_conjuntos.md data/bks_chao.csv results/best_solution.csv results/bks_by_set.csv
   ```
 
   Distancia media de la final (10 it + búsqueda local) frente a Panadero 128: p1 0.58/0.69, p2 0.00/0.11, p3 0.67/1.44, p4 5.87/7.97, p5 1.30/1.46, p6 1.17/1.42, p7 3.42/5.10; todas 2.04/2.85 (media de la figura 4 ponderada por instancias). BKS alcanzado en 189 de 353 y ninguna por encima del BKS.
 - **Errata del paper, corregida el 12-10-2026:** la fila de p2.4.a sale en la tabla 4 como "p2.4.1" y se había perdido al extraer `panadero2021_p1_p2.csv`. Ya está: las comparaciones con p1/p2 son sobre **81** instancias. p2.4.a es trivial (un solo cliente cabe en tmax, recompensa 10 = BKS) y todo método da 10.
 - **`pjs panadero --resume`** (12-10-2026): conserva las filas que ya hay en `<stem>.csv` y `<stem>_runs.csv` y ejecuta solo las instancias de la tabla que faltan; el informe se genera siempre desde los CSV (`panadero::outcomes`). Así se añadió p2.4.a sin repetir las 80 (2 s, 35 s y 0 s en los tres modos). Al reanudar, los CSV en formato antiguo (`k` en vez de `best_k`, `seconds_limit` en vez de `budget`) se pasan al actual sin cambiar valores. El informe suma los tiempos y anota qué instancias se añadieron. Comprobado: con la referencia de 80, regenerar desde los CSV da las mismas cifras que los informes subidos (los de 1 s cambian solo de redacción, porque se generaron con una versión anterior del código).
   ```
-  $E panadero [--alpha grid] [--iters N] [--best-csv ...] --resume --report docs/<informe>.md src/data/top-data src/data/panadero2021_p1_p2.csv results/best_solution.csv results
+  $E panadero [--alpha grid] [--iters N] [--best-csv ...] --resume --report docs/<informe>.md data/top-data data/panadero2021_p1_p2.csv results/best_solution.csv results
   ```
 - **La regla de α de Panadero** ("α cerca de 0 con recompensas heterogéneas, cerca de 1 con homogéneas", sección 4) **no se cumple en Chao**. El CV de las recompensas es el mismo en todo un conjunto, así que solo hay 7 puntos. Entre CV y α óptimo la correlación es de +0.19 en 285 instancias no triviales, con el signo contrario al del paper. α = 0 da solo el 68 % de la mejor en p4, el conjunto más heterogéneo. Está en la diapositiva 4; todavía no está en ningún informe generado por `pjs`.
 
@@ -56,7 +56,7 @@ Papers, en `docs/`; su texto extraído está en `ignore/papers_txt/`, con las le
 
 ## 2. Datos
 
-- **Ubicación:** `TOP/src/data/top-data/`, 387 instancias de Chao et al. (1996). Están en `src/` y no en `data/` como pide el `CLAUDE.md`; moverlas sigue pendiente.
+- **Ubicación:** `TOP/data/top-data/`, 387 instancias de Chao et al. (1996) (estaban en `src/data/`; movidas a `data/` el 28-10-2026).
 - **Formato:** `n;N`, `m;M`, `tmax;T`, y después N líneas `x;y;recompensa`. El primer nodo es el origen y el último el destino. Los tiempos son distancias euclídeas.
 - **Instancias infactibles:** 34, en las que ningún cliente cabe en `tmax` ni siquiera solo. Quedan **353 instancias útiles**. El paper dice 354 en el texto y su tabla 1 suma 389; no cuadra.
 - **Origen y destino:** son puntos distintos en p1–p6 y coinciden en p7.
@@ -174,7 +174,7 @@ Todo desde `TOP/`, con `E=ignore/target/release/pjs.exe`.
 
 ```
 $E grid --png-dir results/figures/routes --report docs/informe_alpha.md \
-    --ls-png-dir results/figures/routes_ls --ls-report docs/informe_busqueda_local.md src/data/top-data results
+    --ls-png-dir results/figures/routes_ls --ls-report docs/informe_busqueda_local.md data/top-data results
 ```
 
 La búsqueda local siempre se ejecuta. `--ls-png-dir` y `--ls-report` son opcionales; tarda unos 2 min 10 s en total.
@@ -196,7 +196,7 @@ La búsqueda local siempre se ejecuta. `--ls-png-dir` y `--ls-report` son opcion
   - `results/best_solution.csv`: una fila por instancia, con la determinista, GRASP, la determinista con búsqueda local, la final y su origen.
   - `results/best_routes.csv` (desde el 12-10-2026): una fila por ruta de la solución final, con la recompensa, el tiempo y la secuencia de clientes (índices de nodo del fichero, separados por espacios; origen y destino implícitos). Es la entrada de `verify_routes`.
   - `results/figures/routes_ls/<instancia>.png` (59 MB) y `docs/informe_busqueda_local.md`.
-- **Con una sola instancia:** `$E grid src/data/top-data/p4.4.t.txt [--png out.png]` imprime una tabla por α, las rutas y una tabla de las élite antes y después de la búsqueda local.
+- **Con una sola instancia:** `$E grid data/top-data/p4.4.t.txt [--png out.png]` imprime una tabla por α, las rutas y una tabla de las élite antes y después de la búsqueda local.
 
 **GRASP con una configuración concreta:**
 
@@ -235,7 +235,7 @@ Por defecto: `--alpha best` (el mejor α determinista de la rejilla), geométric
   - ninguna solución supera el BKS y 73 lo igualan;
   - distancia media al BKS por instancia, la medida del paper: **0.34 % la nuestra**, 0.44 % Panadero con 128 hilos y 1.73 % con 1 hilo;
   - frente a Panadero con 128 hilos, la nuestra es mejor en 10 instancias, igual en 64 y peor en 6;
-  - **cómo se genera:** los datos del paper están extraídos en `src/data/panadero2021_p1_p2.csv`, y la comparación la escribe `pjs panadero` (en Rust).
+  - **cómo se genera:** los datos del paper están extraídos en `data/panadero2021_p1_p2.csv`, y la comparación la escribe `pjs panadero` (en Rust).
 
 **Experimento de 1 s como Panadero** (`pjs panadero`, 12-10-2026), sobre las 81 instancias de sus tablas:
 
@@ -247,7 +247,7 @@ Por defecto: `--alpha best` (el mejor α determinista de la rejilla), geométric
 - **Salidas:** `results/panadero_1s.csv` (una fila por instancia), `results/panadero_1s_runs.csv` (una por ejecución) y `docs/comparacion_panadero.md`.
 
 ```
-$E panadero --report docs/comparacion_panadero.md src/data/top-data src/data/panadero2021_p1_p2.csv results/best_solution.csv results
+$E panadero --report docs/comparacion_panadero.md data/top-data data/panadero2021_p1_p2.csv results/best_solution.csv results
 ```
 
 Opciones: `--alpha best --time 1 --runs 10 --geometric 0.3 --softmax 1 --seed 1` son los valores por defecto. Necesita el `best_solution.csv` de `pjs grid`.
@@ -261,7 +261,7 @@ Opciones: `--alpha best --time 1 --runs 10 --geometric 0.3 --softmax 1 --seed 1`
 
 ```
 $E panadero --alpha grid --best-csv results/panadero_1s.csv --report docs/comparacion_panadero_rejilla.md \
-    src/data/top-data src/data/panadero2021_p1_p2.csv results/best_solution.csv results
+    data/top-data data/panadero2021_p1_p2.csv results/best_solution.csv results
 ```
 
 **Resultado (2 801 s ≈ 47 min):**
@@ -284,7 +284,7 @@ $E panadero --alpha grid --best-csv results/panadero_1s.csv --report docs/compar
 
 ```
 $E panadero --alpha grid --iters 100 --best-csv results/panadero_1s_grid.csv --report docs/comparacion_panadero_rejilla_100it.md \
-    src/data/top-data src/data/panadero2021_p1_p2.csv results/best_solution.csv results
+    data/top-data data/panadero2021_p1_p2.csv results/best_solution.csv results
 ```
 
 **Comprobación:** con 0,01 s, de 6 720 ejecuciones emparejadas con la rejilla solo 2 salieron peores, y fue porque hicieron menos de 10 iteraciones (arranque de los hilos). Las que llegan a 10 iteraciones nunca son peores, como corresponde a semillas compartidas.
@@ -297,7 +297,7 @@ $E panadero --alpha grid --iters 100 --best-csv results/panadero_1s_grid.csv --r
 - **Comprobación independiente de las rutas finales** (12-10-2026), con el binario aparte `verify_routes`:
 
   ```
-  ignore/target/release/verify_routes.exe src/data/top-data results/best_routes.csv results/best_solution.csv
+  ignore/target/release/verify_routes.exe data/top-data results/best_routes.csv results/best_solution.csv
   ```
 
   - **Qué comprueba:** que cada nodo sea un cliente, que no haya clientes repetidos, que haya como mucho m rutas y que cada ruta quepa en tmax. Además, que la recompensa y el tiempo declarados y los totales de `best_solution.csv` cuadren.
@@ -319,10 +319,10 @@ $E panadero --alpha grid --iters 100 --best-csv results/panadero_1s_grid.csv --r
    - los movimientos entre rutas;
    - meter la comparación con el BKS en el informe.
 2. ~~Ficheros obsoletos~~: los dos CSV antiguos de `pjs grasp` (`grasp_geometric_0.3.csv`, `grasp_softmax_1.csv`) se borraron al cerrar la sesión.
-3. **Andamiaje de `TOP/`:**
-   - falta su `README.md`;
-   - falta la fila de TOP en las tablas del README raíz y del `CLAUDE.md`;
-   - hay que mover `src/data/top-data/` a `data/`, actualizando las rutas de los comandos.
+3. ~~**Andamiaje de `TOP/`**~~ (hecho el 28-10-2026): `README.md` creado, fila de TOP en las tablas del README raíz y del `CLAUDE.md`, y datos movidos de `src/data/` a `data/` con las rutas de los comandos actualizadas.
+3b. **Verificación artículo ↔ código (28-10-2026):** 0 B, 4 I, 5 M. El detalle está en el
+   [`scratchpad.md` de la raíz](../../scratchpad.md) §3 (TOP). Los I3 e I4 (validación con
+   Python y reglas de α descartadas, sin código en el repo) los tienen que decidir los autores.
 4. **Tamaño de `results/`:** unos 60 MB de PNG de rutas deterministas, otros 59 MB de rutas tras la búsqueda local y los 11 MB de `grasp_runs.csv`, y `results/` se sube a GitHub. Hay que decidir si va todo o solo una selección.
 5. **Commit:** la rejilla, la búsqueda local y los experimentos de Panadero están en git (hasta `4905c63`). Faltan por subir `docs/metodos_y_comparacion_panadero.md`, la presentación y estas notas.
 6. ~~**Posible optimización:** compartir la lista de ahorros y la solución determinista entre las 20 ejecuciones de GRASP de cada (instancia, α).~~ **Descartada** tras medirla el 11-10-2026 (detalle en [`coste_lista_ahorros.md`](coste_lista_ahorros.md)):

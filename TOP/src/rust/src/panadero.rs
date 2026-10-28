@@ -156,7 +156,7 @@ pub fn read_csv(path: &Path, names: &[&str]) -> Result<Vec<(String, Vec<f64>)>, 
         .collect()
 }
 
-/// The paper's tables (src/data/panadero2021_p1_p2.csv).
+/// The paper's tables (data/panadero2021_p1_p2.csv).
 pub fn load_reference(path: &Path) -> Result<Vec<Reference>, String> {
     Ok(read_csv(path, &["bks", "thr1", "thr128"])?
         .into_iter()
@@ -539,7 +539,7 @@ pub fn write_comparison(outcomes: &[Outcome], cfg: &TimedConfig, input: &ReportI
         ""
     };
     w(format!(
-        "Solo las {n} instancias de las tablas 3 y 4 de Panadero et al. (2021), extraídas en `src/data/panadero2021_p1_p2.csv`.\n\n\
+        "Solo las {n} instancias de las tablas 3 y 4 de Panadero et al. (2021), extraídas en `data/panadero2021_p1_p2.csv`.\n\n\
          - **BKS:** la mejor solución conocida de la literatura (columna [a] de las tablas).\n\
          - **Panadero, 1 hilo / 128 hilos:** su algoritmo (ahorros con aleatorización sesgada, multiarranque), en el que cada \
          hilo itera durante 1 s; con 128 hilos se queda con el mejor (*OBS*).\n\

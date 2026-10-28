@@ -5,12 +5,12 @@ Informe generado por `pjs` (`TOP/src/rust`); se regenera con
 ```
 cd TOP
 ignore/target/release/pjs.exe panadero --alpha best --time 1 --runs 10 --geometric 0.3 --softmax 1 --seed 1 \
-    --report docs/comparacion_panadero.md src/data/top-data src/data/panadero2021_p1_p2.csv results/best_solution.csv results
+    --report docs/comparacion_panadero.md data/top-data data/panadero2021_p1_p2.csv results/best_solution.csv results
 ```
 
 ## Qué se compara
 
-Solo las 81 instancias de las tablas 3 y 4 de Panadero et al. (2021), extraídas en `src/data/panadero2021_p1_p2.csv`.
+Solo las 81 instancias de las tablas 3 y 4 de Panadero et al. (2021), extraídas en `data/panadero2021_p1_p2.csv`.
 
 - **BKS:** la mejor solución conocida de la literatura (columna [a] de las tablas).
 - **Panadero, 1 hilo / 128 hilos:** su algoritmo (ahorros con aleatorización sesgada, multiarranque), en el que cada hilo itera durante 1 s; con 128 hilos se queda con el mejor (*OBS*).

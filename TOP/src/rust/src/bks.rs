@@ -1,7 +1,7 @@
 //! Comparison of the grid (results/best_solution.csv) with the best known solution (BKS) of
 //! every instance, per set, next to the mean gaps of Panadero et al. (2021), Figure 4.
 //!
-//! BKS: src/data/bks_chao.csv, column BEST of MA10-PSOMA-PSOiA-Chao-benchmark.xls, published
+//! BKS: data/bks_chao.csv, column BEST of MA10-PSOMA-PSOiA-Chao-benchmark.xls, published
 //! with Dang, Guibadj and Moukrim (PSOiA) at utc.fr/~moukrim (archive kept in
 //! ignore/downloads/solutions-psoia.zip). On the 80 instances of Panadero's Tables 3 and 4 it
 //! equals their BKS (Ke et al. 2016).
@@ -105,7 +105,7 @@ pub fn write_report(rows: &[SetRow], cmd: &str, report: &Path) -> Result<(), Str
     let mut md = String::from("# Comparación con el BKS de todas las instancias, por conjunto\n\n");
     md += &format!("Informe generado por `pjs bks` (`TOP/src/rust`); se regenera con\n\n```\ncd TOP\n{cmd}\n```\n\n");
     md += "## Qué se compara\n\n";
-    md += "- **BKS:** la mejor solución conocida de cada instancia, columna *BEST* de la hoja de resultados que publican Dang, Guibadj y Moukrim con PSOiA (`src/data/bks_chao.csv`; el original está en `ignore/downloads/solutions-psoia.zip`). En las 80 instancias de las tablas 3 y 4 de Panadero coincide con su BKS (Ke et al., 2016).\n";
+    md += "- **BKS:** la mejor solución conocida de cada instancia, columna *BEST* de la hoja de resultados que publican Dang, Guibadj y Moukrim con PSOiA (`data/bks_chao.csv`; el original está en `ignore/downloads/solutions-psoia.zip`). En las 80 instancias de las tablas 3 y 4 de Panadero coincide con su BKS (Ke et al., 2016).\n";
     md += "- **Nuestros resultados:** la rejilla de [`informe_busqueda_local.md`](informe_busqueda_local.md) (`results/best_solution.csv`): la determinista con el mejor α, la mejor sin búsqueda local (determinista o GRASP de 10 iteraciones) y la final, con búsqueda local sobre las élite.\n";
     md += "- **Panadero, 128 hilos:** la distancia media al BKS de cada conjunto que da su figura 4 (1 s por hilo). El paper no publica los valores por instancia de p3 a p7, solo estas medias.\n";
     md += "- **Distancia:** 100 · (BKS − nuestra) / BKS, media por instancia, sobre las instancias con BKS > 0.\n\n";

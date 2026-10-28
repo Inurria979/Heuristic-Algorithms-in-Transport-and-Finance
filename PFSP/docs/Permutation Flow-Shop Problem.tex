@@ -1,0 +1,330 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage[left=2cm,right=2cm,top=1.6cm,bottom=1.6cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage[font=small,labelfont=bf,skip=4pt]{caption}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage[hidelinks]{hyperref}
+
+\titlespacing*{\section}{0pt}{6pt plus 2pt minus 1pt}{3pt}
+\titlespacing*{\subsection}{0pt}{5pt plus 1pt minus 1pt}{2pt}
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.6em}{}
+\setlist[itemize]{topsep=2pt,itemsep=1pt,parsep=0pt,leftmargin=1.2em}
+\setlist[enumerate]{topsep=2pt,itemsep=1pt,parsep=0pt,leftmargin=1.4em}
+\setlength{\abovedisplayskip}{4pt}
+\setlength{\belowdisplayskip}{4pt}
+\setlength{\textfloatsep}{8pt}
+\renewcommand{\arraystretch}{1.05}
+\linespread{0.97}\selectfont
+
+\lstset{basicstyle=\ttfamily\scriptsize, columns=fullflexible, keepspaces=true,
+        breaklines=true, frame=lines, numbers=left, numberstyle=\tiny\color{gray},
+        commentstyle=\color{gray}, stringstyle=\color{teal!70!black},
+        keywordstyle=\bfseries, showstringspaces=false, upquote=true}
+
+\title{\vspace{-1.2cm}\bfseries NEH, Biased Randomisation and ILS-ESP for the Permutation\\
+Flow-Shop Problem: an Adaptive $\beta$ on Five Taillard Instances}
+\author{Heuristic Algorithms in Transport and Finance --- Master's course assignment \\
+    Javier Salvatierra \\
+    Jesús Inurria
+}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+\vspace{-0.8cm}
+
+\begin{abstract}
+\noindent\small
+The Permutation Flow-Shop Problem (PFSP) asks for the order in which $n$ jobs cross $m$ machines so that
+the last job finishes as early as possible. We implement the NEH heuristic, its biased-randomised
+version RandNEH and the iterated local search ILS-ESP of Juan et al.\ (2014) in Python with Numba, and
+add a geometric distribution whose parameter $\beta$ grows after every three failed constructions. On
+five Taillard instances with 20 to 500 jobs, every RandNEH variant beats NEH on average, by 0.10--0.73
+gap points with a biased distribution. The adaptive $\beta$ matches a well-chosen fixed $\beta$ except
+on the 20-job instance, but needs more constructions than $\beta=0.5$--$0.7$ (77 against 53\,ms on 500
+jobs). With a budget of $2\,nm$\,ms, the six ILS-ESP starts end within 0.3 points, close to the noise
+between seeds.
+\end{abstract}
+
+\section{Introduction}
+
+A workshop has $n$ jobs and $m$ machines in a line. Every job visits the machines in the same order,
+and each machine processes the jobs in the same sequence, so the only decision is that sequence: a
+permutation of the jobs. The goal is to minimise the \emph{makespan}, the time at which the last job
+leaves the last machine. The search space has $n!$ permutations and the problem is NP-hard for three or more
+machines~\cite{garey1976}, hence the use of heuristics. The classical
+constructive method is NEH, by Nawaz, Enscore and Ham~\cite{neh1983}.
+
+Juan et al.~\cite{juan2014} turn NEH into a multi-start method by \emph{biased randomisation}: instead
+of always taking the next job of a fixed list, they draw it from a distribution that favours the front
+of the list (RandNEH), and they use the result as the start of an iterated local search (ILS-ESP). We
+reimplement both and study two questions: how the choice of distribution affects RandNEH, and whether a
+better start changes the final ILS-ESP result. We also propose \emph{Geo-adapt}, a geometric
+distribution whose parameter adapts during the run. We deal only with the makespan, without due dates or
+setup times.
+
+The test instances are five of Taillard's benchmark~\cite{taillard1993}: \texttt{tai001}
+($n\times m=20\times5$), \texttt{tai051} ($50\times20$), \texttt{tai081} ($100\times20$),
+\texttt{tai101} ($200\times20$) and \texttt{tai117} ($500\times20$). The best-known solutions (BKS) come from Taillard's
+table for \texttt{tai001} and from a CSV compilation hosted on Zenodo for the rest, which marks only
+those of \texttt{tai101} and \texttt{tai117} as proven optimal. Below we state the model, describe the methods and report two
+experiments: the constructive phase alone and the complete ILS-ESP.
+
+\section{The permutation flow-shop model}
+\label{sec:model}
+
+Let $p_{j,k}$ be the processing time of job $j$ on machine $k$ ($j=1,\dots,n$; $k=1,\dots,m$) and
+$\pi=(\pi(1),\dots,\pi(n))$ a permutation of the jobs, with $\Pi$ the set of all of them. With
+$C_{i,k}$ the time at which the $i$-th job of the sequence leaves machine $k$, the PFSP reads
+\begin{equation}
+\min_{\pi\in\Pi}\ C_{\max}(\pi)=C_{n,m}
+\qquad\text{s.t.}\qquad
+C_{i,k}=\max\bigl(C_{i-1,k},\,C_{i,k-1}\bigr)+p_{\pi(i),k},\qquad
+C_{0,k}=C_{i,0}=0 .
+\label{eq:model}
+\end{equation}
+Read literally: the $i$-th job can start on machine $k$ only when the previous job has left that
+machine and the job itself has left machine $k-1$. There are no other constraints: once the permutation
+is fixed, the recurrence gives the earliest schedule, so every permutation is feasible and the whole
+difficulty lies in the order. Evaluating one permutation costs $O(nm)$.
+
+NEH and the local search below repeatedly insert one job at every possible position of a partial sequence of $k$ jobs. Done naively, the $k+1$
+evaluations cost $O(k^2m)$; Taillard's acceleration~\cite{taillard1990} reuses the completion times of
+the prefix (forward matrix), the tails of the suffix (backward matrix) and the completion times of the
+inserted job, and evaluates all positions in $O(km)$. For \texttt{tai117} this divides the cost of
+every insertion step by up to $n=500$.
+
+\section{NEH, RandNEH and ILS-ESP}
+\label{sec:method}
+
+\textbf{NEH}~\cite{neh1983} sorts the jobs by decreasing \emph{total processing time} (TPT),
+$\sum_k p_{j,k}$, and builds the sequence one job at a time: each job, taken in that order, is inserted
+at the position of the partial sequence with the lowest partial makespan. It is deterministic: one run,
+one solution.
+
+\textbf{RandNEH}~\cite{juan2014} keeps the insertion step but picks the next job at random from the
+remaining TPT-sorted list. If $r$ jobs remain and $u\sim U(0,1)$, the position \texttt{pos} in the list
+(0 = first) is drawn from one of three distributions:
+\begin{itemize}
+\item \textbf{Triangular} (Tri): $\texttt{pos}=\lfloor r\,(1-\sqrt{1-u})\rfloor$,
+with probabilities decreasing linearly along the list. It has no parameter, but its mean position is
+about $r/3$, so its bias weakens as $r$ grows: 6.17 for $r=20$, 32.87 for $r=100$.
+\item \textbf{Geometric} Geo($\beta$), truncated to the $r$ positions, $P(\texttt{pos}=i)\propto
+\beta(1-\beta)^i$. A higher $\beta$ concentrates the choice at the front, and once $r\gg1/\beta$ the mean
+position barely depends on $r$: 8.97 for Geo(0.1) and 2.32 for Geo(0.3) with $r=100$, but 7.81 and
+18.45 for Geo(0.05) with $r=20$ and $r=100$.
+\item \textbf{Uniform} (Unif), $\texttt{pos}=\lfloor ru\rfloor$, a control with no bias at all.
+\end{itemize}
+A single biased construction is usually worse than NEH: in a preliminary run with 200 single
+constructions per case, the mean gap was above NEH's in 32 of 35 instance--distribution pairs. RandNEH
+is therefore a loop (Figure~6 of~\cite{juan2014}):
+compute NEH, then build biased solutions until one is strictly better than NEH or $n$ attempts have
+been made, and return the best. The output is never worse than NEH, and its cost is the number of
+constructions.
+
+\textbf{Geo-adapt} is our proposal. A fixed $\beta$ has to be chosen in advance and the best value
+depends on the instance. Geo-adapt runs the same loop but changes $\beta$ with the failures: attempt
+$t$ uses $\beta_t=\min\bigl(0.7,\ 0.05+0.05\lfloor(t-1)/3\rfloor\bigr)$. It starts wide and moves towards NEH every three failures; a success ends the run, and the
+next run starts again at $0.05$. The only signal used is whether a construction beat NEH.
+
+\textbf{ILS-ESP}~\cite{juan2014} starts from a RandNEH solution improved by local search, the
+\emph{base solution}, and repeats until the time is up:
+\begin{enumerate}
+\item \textbf{Enhanced swap.} Swap the jobs at two random positions, then move each of the two jobs to
+its best position to its left, first the one nearer the front.
+\item \textbf{Local search} (our choice, see Section~\ref{sec:impl}). Remove every job, in random order, and reinsert it at its best position;
+repeat until a full pass brings no improvement. The result is a local optimum for insertion moves.
+\item \textbf{Demon acceptance.} If the new solution is better, it becomes the base solution and its
+improvement is stored. A worse solution is accepted only right after an improvement and only if it is
+worse by no more than that improvement, which lets the search leave a local optimum without drifting.
+\end{enumerate}
+The method has no parameters besides the time budget.
+
+\section{Implementation}
+\label{sec:impl}
+
+The code is a single Python notebook, \texttt{PFSP\_RandNEH\_ILS\_ESP\_en.ipynb} (Python~3.13), with NumPy, pandas,
+SciPy and matplotlib; every inner loop, from the makespan to the ILS iterations, is compiled with Numba
+(\texttt{@njit}). The key function,
+\texttt{insert\_best\_position(p, perm, k)}, moves job \texttt{perm[k]} to its best position within
+\texttt{perm[0..k]} in $O(km)$; NEH, the local search and the enhanced swap are all built on it.
+Ties, frequent because makespans are integers, go to the leftmost position, and the TPT sort is stable
+(lower index first). In the course description we followed, the triangular rule is
+$X=b\,(1-\sqrt{1-u})$ with $b$ left undefined; we take $b=r$, so that probabilities depend on the
+number of eligible jobs. The local search is not detailed either; ours is the insertion local search
+of Section~\ref{sec:method}.
+
+Two checks precede the experiments: the accelerated NEH returns the same permutation and makespan as
+a naive NEH on \texttt{tai001} and \texttt{tai051} (1\,286 and 4\,082), and every RandNEH output is a
+valid permutation whose makespan, recomputed from scratch, matches and never exceeds NEH.
+
+\textbf{Experiment A} (constructive phase) runs NEH once and the RandNEH loop 30 times per distribution
+and instance with eight fixed distributions --- Tri, Geo($\beta$) for $\beta\in\{0.05, 0.1, 0.2, 0.3,
+0.5, 0.7\}$ and Unif --- plus Geo-adapt. \textbf{Experiment B} keeps ILS-ESP intact and changes only the
+start (NEH, Tri, Geo(0.1), Geo(0.3), Unif, Geo-adapt), with 10 seeds per start and instance and the same
+budget for all, $2\,nm$\,ms (0.2\,s for \texttt{tai001}, 20\,s for \texttt{tai117}), initial
+construction included. Since Numba has no clock in compiled code, the budget is checked from Python
+between blocks of about 20\,ms of iterations. The 300 runs of Experiment B took 17.2\,min on two worker
+processes of a shared machine. The metric is $\text{gap}=100\,(C_{\max}-\text{BKS})/\text{BKS}$, and
+each start is compared with NEH by a two-sided Mann--Whitney test, without correction for multiple
+comparisons. The Geo-adapt parameters were fixed before the runs, after a preliminary check of fixed
+$\beta$ from 0.3 to 0.9, and were not tuned.
+
+\section{Computational results}
+\label{sec:res}
+
+Tables~\ref{tab:results} and~\ref{tab:ils} report Experiments A and B.
+
+\begin{table}[!t]
+\centering
+\caption{Experiment A, constructive phase: mean gap (\%) over 30 runs and mean constructions per run
+(\emph{Con.}) of the RandNEH loop; NEH is a single deterministic run. BKS in the header. \emph{Mean}:
+mean gap over the five instances. \emph{ms}: wall-clock time per run on \texttt{tai117}.}
+\label{tab:results}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrrrrrrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{\texttt{tai001} (1\,278)} & \multicolumn{2}{c}{\texttt{tai051} (3\,846)}
+ & \multicolumn{2}{c}{\texttt{tai081} (6\,171)} & \multicolumn{2}{c}{\texttt{tai101} (11\,158)}
+ & \multicolumn{2}{c}{\texttt{tai117} (26\,389)} & & \texttt{tai117} \\
+Distribution & Gap & Con. & Gap & Con. & Gap & Con. & Gap & Con. & Gap & Con. & Mean & ms \\
+\midrule
+NEH       & 0.63 & --   & 6.14 & --  & 6.00 & --   & 3.91 & --    & 1.55 & --    & 3.64 & 15 \\
+Tri       & 0.37 & 14.6 & 5.61 & 3.0 & 5.75 & 14.3 & 3.77 & 14.5  & 1.45 & 7.9   & 3.39 & 143 \\
+Geo(0.05) & 0.43 & 16.1 & 5.51 & 2.8 & 5.74 & 12.1 & 3.76 & 13.9  & 1.44 & 3.5   & 3.37 & 67 \\
+Geo(0.1)  & 0.39 & 13.8 & 5.66 & 2.5 & 5.61 & 8.3  & 3.71 & 10.6  & 1.40 & 2.7   & 3.36 & 60 \\
+Geo(0.2)  & 0.28 & 11.7 & 5.47 & 1.7 & 5.72 & 5.1  & 3.72 & 11.1  & 1.40 & 2.2   & 3.32 & 51 \\
+Geo(0.3)  & 0.23 & 8.9  & 5.55 & 1.7 & 5.65 & 4.9  & 3.76 & 7.4   & 1.40 & 3.2   & 3.32 & 69 \\
+Geo(0.5)  & 0.21 & 5.3  & 5.44 & 1.3 & 5.68 & 5.1  & 3.75 & 6.9   & 1.39 & 2.6   & 3.29 & 53 \\
+Geo(0.7)  & 0.10 & 6.6  & 5.40 & 1.2 & 5.74 & 6.7  & 3.71 & 5.6   & 1.41 & 2.4   & 3.27 & 53 \\
+Unif      & 0.51 & 17.0 & 5.75 & 4.4 & 5.87 & 57.2 & 3.80 & 103.6 & 1.49 & 149.9 & 3.48 & 2\,429 \\
+Geo-adapt & 0.36 & 14.6 & 5.58 & 3.1 & 5.68 & 7.2  & 3.73 & 11.3  & 1.41 & 3.5   & 3.35 & 77 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{RandNEH vs.\ NEH.} Every distribution improves on NEH on average in all five instances. With
+the triangular and geometric distributions, 100\,\% of the runs beat NEH whenever $n\ge50$; the uniform
+control drops to 67\,\%, 80\,\% and 97\,\% on \texttt{tai081}, \texttt{tai101} and \texttt{tai117}. The
+gain is modest, 0.10--0.73 gap points with a biased distribution (0.06 for the uniform on
+\texttt{tai117}), because the loop stops at the \emph{first} construction that beats NEH, not at the best
+one. \texttt{tai001} is the exception: with $n=20$ the loop allows only 20 attempts, and the success
+rate ranges from 33\,\% (Unif) to 97\,\% (Geo(0.5) and Geo(0.7)).
+
+\textbf{Similar quality, different cost.} Geo($\beta$) with $\beta$ between 0.3 and 0.7 forms a
+plateau: on each instance with $n\ge50$ the three mean gaps lie within 0.15 points, with 1.2--7.4
+constructions per run. The triangular distribution is slightly worse on average (3.39) and needs more constructions
+(14.3--14.5 on \texttt{tai081} and \texttt{tai101}, 143\,ms against 53\,ms for Geo(0.7) on
+\texttt{tai117}), and the uniform is the most expensive (149.9 constructions, 2.4\,s): the weaker the
+bias, the further a construction strays from NEH and the less likely it is to beat it. Differences of
+0.1--0.2 points between distributions are within the noise of 30 runs and are not a ranking; times come
+from a shared machine and are only an order of magnitude.
+
+\textbf{Adaptive $\beta$.} Geo-adapt gives the same quality as the plateau (mean gap 3.35 against
+3.27--3.32) without choosing $\beta$, but its cost is that of Geo(0.1)--Geo(0.2), not of a high $\beta$:
+11.3 constructions on \texttt{tai101} against 5.6--6.9 for Geo(0.5)--Geo(0.7), and 77\,ms against 53\,ms on
+\texttt{tai117}. The $\beta$ at which each run succeeded shows why: the median is 0.05 on
+\texttt{tai051} and \texttt{tai117}, where the first level is usually enough, but 0.175 on
+\texttt{tai101} (range 0.05--0.50), where the first attempts at low $\beta$ are wasted. Of the 139
+successful runs, 134 succeeded at $\beta\le0.35$; the maximum was 0.60 and the cap of 0.7 was never reached.
+The ramp is too slow for small instances: on \texttt{tai001} it reaches only $\beta=0.35$ within the 20
+attempts, and 37\,\% of the runs never beat NEH (63\,\% success against 87--97\,\% for
+Geo(0.3)--Geo(0.7)).
+
+\begin{table}[!t]
+\centering
+\caption{Experiment B, complete ILS-ESP: final gap (\%) as mean $\pm$ standard deviation over 10 seeds,
+and $p$-value of a two-sided Mann--Whitney test against the NEH start (uncorrected). Budget $2\,nm$\,ms
+in the header. \texttt{tai001} is omitted: all 60 runs reach gap 0. \emph{Mean}: mean final gap over
+the five instances (\texttt{tai001} counted as 0).}
+\label{tab:ils}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrrrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{\texttt{tai051} (2\,s)} & \multicolumn{2}{c}{\texttt{tai081} (4\,s)}
+ & \multicolumn{2}{c}{\texttt{tai101} (8\,s)} & \multicolumn{2}{c}{\texttt{tai117} (20\,s)} & \\
+Start & Gap & $p$ & Gap & $p$ & Gap & $p$ & Gap & $p$ & Mean \\
+\midrule
+NEH       & $1.30\pm0.09$ & --   & $2.40\pm0.32$ & --    & $1.76\pm0.15$ & --   & $0.54\pm0.13$ & --    & 1.20 \\
+Tri       & $1.22\pm0.22$ & 0.35 & $2.15\pm0.25$ & 0.049 & $1.72\pm0.14$ & 0.45 & $0.57\pm0.11$ & 0.28  & 1.13 \\
+Geo(0.1)  & $1.33\pm0.10$ & 0.59 & $2.17\pm0.31$ & 0.11  & $1.78\pm0.14$ & 0.94 & $0.59\pm0.13$ & 0.18  & 1.17 \\
+Geo(0.3)  & $1.33\pm0.14$ & 0.75 & $2.19\pm0.22$ & 0.089 & $1.75\pm0.13$ & 0.91 & $0.64\pm0.10$ & 0.063 & 1.19 \\
+Unif      & $1.12\pm0.24$ & 0.13 & $2.32\pm0.23$ & 0.31  & $1.75\pm0.15$ & 0.68 & $0.62\pm0.11$ & 0.067 & 1.16 \\
+Geo-adapt & $1.29\pm0.15$ & 0.78 & $2.11\pm0.14$ & 0.017 & $1.75\pm0.13$ & 0.65 & $0.62\pm0.11$ & 0.10  & 1.16 \\
+\midrule
+Iterations & \multicolumn{2}{r}{1\,439--1\,489} & \multicolumn{2}{r}{604--642} & \multicolumn{2}{r}{322--338}
+ & \multicolumn{2}{r}{231--262} & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{ILS-ESP: the start barely matters.} In every instance the six starts end within 0.3 points of
+each other (0.07 on \texttt{tai101}, 0.30 on \texttt{tai081}), comparable to the standard deviation
+between seeds (0.09--0.32). On
+\texttt{tai051} the first local search erases the head start of RandNEH: the mean gap after it is 3.94
+from NEH, 4.21 from Tri and 3.92 from Geo-adapt, although they started at 6.14, 5.73 and 5.81
+(Experiment B seeds). The 231--1\,489 mean iterations per run that follow (Table~\ref{tab:ils}), about
+5\,000 on \texttt{tai001}, then shape the result.
+
+\textbf{Where the start shows.} \texttt{tai081} is the only instance where randomised starts help
+repeatedly: all five end below NEH (2.40) by 0.09--0.30 points, Geo-adapt with the lowest mean (2.11,
+$p=0.017$) and the lowest spread between seeds (0.14). Here the local search does not level the starts
+but widens NEH's deficit, from 0.20--0.33 points before it to 0.36--0.57 after it (4.81 against
+4.24--4.45), and the final ranking follows. On \texttt{tai117} it is the opposite: NEH leaves the local
+search among the best (0.94 against 0.91--1.07) and is the best start at the end (0.54 against
+0.57--0.64, $p=0.063$--$0.28$), with only about 250 iterations in 20\,s. Neither result is proof: with
+20 non-trivial uncorrected tests, none of the $p$-values survives a Bonferroni correction, and changing
+the set of 10 seeds moved the mean final gap of one configuration on \texttt{tai117} from 0.71 to 0.63.
+If we take the best of the 10 seeds, which emulates 10 independent agents run in parallel, the Tri
+start reaches 0.00, 0.65, 1.72, 1.42 and 0.45 on the five instances. With a short budget and one instance per
+size we do not compare these gaps with published averages.
+
+\section{Conclusions}
+
+Biased randomisation turns the deterministic NEH into a loop of cheap constructions that always ends at
+or below NEH: every distribution beat NEH on average in the five instances, by up to 0.73 gap points.
+With $\beta\ge0.1$ the geometric distribution keeps its bias as the number of remaining jobs grows,
+so on average it matches or improves on the triangular and uniform ones with fewer constructions; a high $\beta$
+keeps each construction close to NEH, which makes a fixed $\beta$ between 0.3 and 0.7 the cheapest
+choice (1.2--7.4 constructions per run for $n\ge50$). Our adaptive $\beta$ reaches the same quality
+without choosing $\beta$, but costs more than a high fixed $\beta$ and starts too slowly for $n=20$.
+Inside ILS-ESP the constructive gap barely matters: the six starts end within 0.3 points, and the
+clearest effect of the start is on \texttt{tai081}, where NEH's deficit widens in the first local
+search and all five randomised starts finish below it. A natural next step is a loop that
+does not stop at the first success, to measure whether the extra constructions pay for themselves.
+
+\paragraph{Code availability.} All results come from the notebook
+\texttt{src/PFSP\_RandNEH\_ILS\_ESP\_en.ipynb}. By default it
+reads the saved results in \texttt{results/}, so the tables can be reproduced without rerunning the
+experiments.
+
+\begin{thebibliography}{9}
+\footnotesize\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+\bibitem{juan2014} A.~A. Juan, H.~R. Louren\c{c}o, M.~Mateo, R.~Luo and Q.~Castell\`a. Using iterated
+local search for solving the flow-shop problem: parallelization, parametrization, and randomization
+issues. \emph{Int.\ Trans.\ Oper.\ Res.}, 21(1):103--126, 2014.
+\bibitem{garey1976} M.~R. Garey, D.~S. Johnson and R.~Sethi. The complexity of flowshop and jobshop
+scheduling. \emph{Math.\ Oper.\ Res.}, 1(2):117--129, 1976.
+\bibitem{neh1983} M.~Nawaz, E.~E. Enscore and I.~Ham. A heuristic algorithm for the $m$-machine, $n$-job
+flow-shop sequencing problem. \emph{Omega}, 11(1):91--95, 1983.
+\bibitem{taillard1990} E.~Taillard. Some efficient heuristic methods for the flow shop sequencing
+problem. \emph{Eur.\ J.\ Oper.\ Res.}, 47(1):65--74, 1990.
+\bibitem{taillard1993} E.~Taillard. Benchmarks for basic scheduling problems. \emph{Eur.\ J.\ Oper.\
+Res.}, 64(2):278--285, 1993.
+\end{thebibliography}
+
+\end{document}

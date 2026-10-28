@@ -1,0 +1,8 @@
+instance,Biased geometric,Biased triangular,Biased Zipf,Biased softmax
+eil51,=,BETTER,=,=
+berlin52,BETTER,BETTER,=,=
+st70,=,=,worse,=
+eil76,=,=,=,=
+kroA100,=,=,=,=
+ch130,=,=,=,=
+a280,BETTER,worse,=,=

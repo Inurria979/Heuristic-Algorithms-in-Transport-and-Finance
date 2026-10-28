@@ -18,7 +18,7 @@
 //! Usage, from TOP/:
 //!   ignore/target/release/recheck.exe [--time S | --iters N] [--runs R] [--seed S]
 //!       [--grid-csv results/best_solution.csv] [--png out.png]
-//!       [--bks-sol src/data/psoia_p4.3.k.sol.txt --bks-png out.png] [--report docs/FILE.md]
+//!       [--bks-sol data/psoia_p4.3.k.sol.txt --bks-png out.png] [--report docs/FILE.md]
 //!       <instance.txt> <out_dir>
 //!   defaults: 1 s per run, 10 runs per alpha and randomisation, geometric beta = 0.3,
 //!   softmax tau = 1, seed 1 (the grid's). Checks that every solution is feasible and writes
@@ -410,7 +410,7 @@ fn write_doc(d: &Doc, report: &Path) -> Result<(), String> {
     let png = d.files.png.map(|p| format!(" --png {}", slash(p))).unwrap_or_default();
     let bks_png = d.files.bks_png.map(|p| format!(" --bks-png {}", slash(p))).unwrap_or_default();
     w(format!(
-        "```\nignore/target/release/recheck.exe {} --runs {} --seed {} --grid-csv {}{png} \\\n    --bks-sol {}{bks_png} --report {} \\\n    src/data/top-data/{}.txt {}\n```",
+        "```\nignore/target/release/recheck.exe {} --runs {} --seed {} --grid-csv {}{png} \\\n    --bks-sol {}{bks_png} --report {} \\\n    data/top-data/{}.txt {}\n```",
         d.cfg.budget.flag(),
         d.cfg.runs,
         d.cfg.seed,
@@ -457,7 +457,7 @@ fn write_doc(d: &Doc, report: &Path) -> Result<(), String> {
          iteraciones de media), con las mismas semillas, las mismas reglas de élite y la misma búsqueda local. Tardó {:.0} s. \
          La final sale de {}.\n\
          - **BKS:** la mejor solución conocida de la literatura, {bks_reward}, en la columna BEST de \
-         `MA10-PSOMA-PSOiA-Chao-benchmark.xls` (Dang, Guibadj y Moukrim; es la de `src/data/bks_chao.csv`). Sus rutas son las de \
+         `MA10-PSOMA-PSOiA-Chao-benchmark.xls` (Dang, Guibadj y Moukrim; es la de `data/bks_chao.csv`). Sus rutas son las de \
          su fichero de solución, copiado sin cambios en [`{}`]({}); allí los clientes se numeran desde 0, así que el cliente *a* es \
          el nodo *a* + 1 del fichero de la instancia. Recalculadas aquí, las tres rutas dan exactamente la recompensa y la \
          longitud que declara el fichero.",
@@ -606,7 +606,7 @@ fn write_doc(d: &Doc, report: &Path) -> Result<(), String> {
          - **La rejilla y el BKS** pasan la misma comprobación al leerlos.\n\
          - **Comprobación externa** de la final del recheck con `verify_routes`, que no comparte código con `pjs` (lee la \
          instancia con su propio parser y recalcula las distancias):\n\n\
-         ```\nignore/target/release/verify_routes.exe src/data/top-data {} {}\n```",
+         ```\nignore/target/release/verify_routes.exe data/top-data {} {}\n```",
         d.checked,
         d.checked,
         d.per_alpha.len(),

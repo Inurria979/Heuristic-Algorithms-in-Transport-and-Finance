@@ -3,7 +3,8 @@
 Lab projects for the master's course *Heuristic Algorithms in Transport and Finance*.
 There is **one folder per project**, and each folder is a self-contained
 [uv](https://docs.astral.sh/uv/) project: its own `pyproject.toml`, `uv.lock`,
-pinned Python version and its own `.venv`.
+pinned Python version and its own `.venv`. The exceptions are `TOP/`, a Rust (Cargo)
+project, and `DTOP/`, which has no code.
 
 ## Projects
 
@@ -13,16 +14,19 @@ pinned Python version and its own `.venv`.
 | [`TSP/`](TSP/) | **Travelling Salesman Problem.** Two constructive heuristics without local search — nearest neighbour and greedy edge (*multi-fragment*) — run over the 111 TSPLIB instances and measured against the 32 known optimal tours. | Code finished | [`src/tsp_greedy_en.ipynb`](TSP/src/tsp_greedy_en.ipynb) |
 | [`VRP/`](VRP/) | **Capacitated Vehicle Routing Problem** with the Clarke & Wright savings heuristic on 33 classic benchmark instances (Augerat A/B/P, Christofides E/M, Fisher F), compared with Table 1 of Juan et al. (2011). | Finished | [`src/vrp.ipynb`](VRP/src/vrp.ipynb) + 3-page article in `docs/` (`.tex` and PDF) + class presentation |
 | [`DTOP/`](DTOP/) | **Dynamic Team Orienteering Problem** approached with Transformers + reinforcement learning. No code: the activity was a presentation in class. | Finished | Class presentation, reference papers |
+| [`TOP/`](TOP/) | **Team Orienteering Problem.** PJS savings heuristic of Panadero et al. (2021) with a grid of 21 α values, GRASP with geometric and softmax biased randomisation and a local search on the elite solutions, written in Rust with rayon and run on the 387 Chao instances. | Finished | [`src/rust/`](TOP/src/rust/) + 3-page article in `docs/` (`.tex` and PDF) + class presentation |
+| [`GRASP/`](GRASP/) | **GRASP for the TSP.** Clarke & Wright savings construction with a classical RCL versus four biased-randomisation rules (geometric, triangular, Zipf, softmax), plus 2-opt, on 7 TSPLIB test instances. | Finished | [`src/GRASP_TSP_savings_biased_EN.ipynb`](GRASP/src/GRASP_TSP_savings_biased_EN.ipynb) + 3-page article in `docs/` (`.tex` and PDF) + class presentation |
+| [`PFSP/`](PFSP/) | **Permutation Flow-Shop Problem.** NEH, RandNEH and ILS-ESP of Juan et al. (2014) with an adaptive β of our own, on five Taillard instances (20 to 500 jobs). | Finished (instance files still to be added to `data/`) | [`src/PFSP_RandNEH_ILS_ESP_en.ipynb`](PFSP/src/PFSP_RandNEH_ILS_ESP_en.ipynb) + 3-page article in `docs/` (`.tex` and PDF) + class presentation |
 
 Each folder has its own `README.md` with the model, the method and the results.
 
 ## Layout
 
-Every code project (`POP/`, `TSP/`, `VRP/`) follows the same structure:
+Every code project (`POP/`, `TSP/`, `VRP/`, `TOP/`, `GRASP/`, `PFSP/`) follows the same structure:
 
 | Folder | Contents | In git |
 |---|---|---|
-| `src/` | code: notebooks and `.py` modules | yes |
+| `src/` | code: notebooks and `.py` modules (C++ in `VRP/src/cpp/`, the Cargo project in `TOP/src/rust/`) | yes |
 | `data/` | problem instances (benchmarks, reference solutions) | yes |
 | `docs/` | PDFs from the lecturer (slides, handouts, reference papers) and our own documents (articles, outlines, notes) | yes, PDFs included |
 | `results/` | generated outputs: CSVs and figures | yes |
@@ -36,6 +40,8 @@ Heuristic-Algorithms-in-Transport-and-Finance/
 ├── .gitignore          one ignore file for the whole repository
 ├── .gitattributes      LF normalisation inside the repo, binaries marked as such
 ├── CLAUDE.md           instructions for the coding agent
+├── scratchpad.md       handoff notes between work sessions (Spanish): state, reviews, pending items
+├── .claude/            agents and slash commands for Claude Code (/paper-loop, /orquestar)
 ├── README.md           this file
 │
 ├── POP/
@@ -66,9 +72,32 @@ Heuristic-Algorithms-in-Transport-and-Finance/
 │   ├── results/            sequential_cws.csv, cws_comparison.csv, cws_cpp.csv, figures/
 │   └── ignore/
 │
-└── DTOP/
-    ├── .python-version, pyproject.toml, uv.lock, .venv/
-    └── *.pdf                reference papers and the class presentation (no code)
+├── DTOP/
+│   ├── .python-version, pyproject.toml, uv.lock, .venv/
+│   └── *.pdf                reference papers and the class presentation (no code)
+│
+├── TOP/                    Rust only: no Python environment
+│   ├── src/rust/           Cargo project (binaries pjs and verify_routes); builds to ignore/target/
+│   ├── data/               387 Chao instances, BKS, Panadero et al. (2021) tables 3–4
+│   ├── docs/               reference papers, the article (.tex + PDF), presentation, reports written by pjs
+│   ├── results/            grid, GRASP and local-search CSVs, route figures
+│   └── ignore/
+│
+├── GRASP/
+│   ├── .python-version (3.13), pyproject.toml, uv.lock, .venv/
+│   ├── src/                GRASP_TSP_savings_biased_EN.ipynb (+ Spanish version)
+│   ├── data/               the 10 TSPLIB instances used, copied from TSP/data/
+│   ├── docs/               the article (.tex + PDF), presentation and script
+│   ├── results/            gap, time and verdict CSVs, figures
+│   └── ignore/
+│
+└── PFSP/
+    ├── .python-version (3.13), pyproject.toml, uv.lock, .venv/
+    ├── src/                PFSP_RandNEH_ILS_ESP_en.ipynb (+ Spanish version)
+    ├── data/               Taillard instances (not added yet)
+    ├── docs/               the article (.tex + PDF), presentation
+    ├── results/            experiment A and B CSVs (+ two earlier versions)
+    └── ignore/
 ```
 
 Notebooks run with `src/` as their working directory, so they read `../data/` and write
@@ -76,7 +105,9 @@ to `../results/`.
 
 ## Environments
 
-All projects pin **Python 3.14** and are managed with **uv**. They are deliberately
+All Python projects pin **Python 3.14** and are managed with **uv**, except `GRASP/` and
+`PFSP/`, which pin 3.13, the version their saved results were produced with. `TOP/` needs
+only [rustup](https://rustup.rs/) (see its README). They are deliberately
 *independent*: there is no `pyproject.toml` at the repository root and **no uv workspace**,
 so every folder resolves and locks its own dependencies and their `.venv` can never
 interfere with one another.

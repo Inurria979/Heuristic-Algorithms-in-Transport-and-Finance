@@ -1,0 +1,123 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage[left=2cm,right=2cm,top=1.6cm,bottom=1.6cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage[font=small,labelfont=bf,skip=4pt]{caption}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage[hidelinks]{hyperref}
+
+\titlespacing*{\section}{0pt}{6pt plus 2pt minus 1pt}{3pt}
+\titlespacing*{\subsection}{0pt}{5pt plus 1pt minus 1pt}{2pt}
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.6em}{}
+\setlist[itemize]{topsep=2pt,itemsep=1pt,parsep=0pt,leftmargin=1.2em}
+\setlist[enumerate]{topsep=2pt,itemsep=1pt,parsep=0pt,leftmargin=1.4em}
+\setlength{\abovedisplayskip}{4pt}
+\setlength{\belowdisplayskip}{4pt}
+\setlength{\textfloatsep}{8pt}
+\renewcommand{\arraystretch}{1.05}
+\linespread{0.97}\selectfont
+
+\lstset{basicstyle=\ttfamily\scriptsize, columns=fullflexible, keepspaces=true,
+        breaklines=true, frame=lines, numbers=left, numberstyle=\tiny\color{gray},
+        commentstyle=\color{gray}, stringstyle=\color{teal!70!black},
+        keywordstyle=\bfseries, showstringspaces=false, upquote=true}
+
+\title{\vspace{-1.2cm}\bfseries <PROBLEM AND METHOD>\\
+<SCOPE OR DATA>}
+\author{Heuristic Algorithms in Transport and Finance --- Master's course assignment \\
+    Javier Salvatierra \\
+    Jesús Inurria
+}
+\date{<MONTH> 2026}
+
+\begin{document}
+\maketitle
+\vspace{-0.8cm}
+
+\begin{abstract}
+\noindent\small
+<120--135 WORDS: PROBLEM IN ONE SENTENCE; WHAT WE DO; HEADLINE NUMBERS; ONE LIMITATION OR FINDING.>
+\end{abstract}
+
+\section{Introduction}
+
+<PROBLEM IN PLAIN WORDS. VARIANT, DIFFICULTY, FOUNDING AND COURSE REFERENCES, SCOPE. INSTANCES. ROADMAP.>
+
+\section{<MODEL SECTION TITLE>}
+\label{sec:model}
+
+\begin{equation}
+\min\ <OBJECTIVE>
+\qquad\text{s.t.}\qquad
+<CONSTRAINTS>
+\label{eq:model}
+\end{equation}
+
+\section{<METHOD SECTION TITLE>}
+\label{sec:method}
+
+\section{Implementation}
+\label{sec:impl}
+
+\section{Computational results}
+\label{sec:res}
+
+Table~\ref{tab:results} compares <...> with <REFERENCE>, with
+$\text{gap}=100\,(\text{cost}-\text{ref})/\text{ref}$.
+
+\begin{table}[!t]
+\centering
+\caption{<WHAT IS COMPARED; SOURCE OF THE REFERENCE COLUMNS; MEANING OF BOLD.>}
+\label{tab:results}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Instance & <COL> & <COL> & <COL> \\
+\midrule
+\texttt{<instance>} & 0.00 & 0.00 & 0.00 \\
+\midrule
+\textbf{Mean} & & & \textbf{0.00} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!htb]
+\centering
+\graphicspath{{../results/figures/}}
+\includegraphics[width=0.6\textwidth]{<FIGURE>.png}
+\caption{<WHAT IS SHOWN; COLOURS, MARKERS, PANELS AND AXES.>}
+\label{fig:<name>}
+\end{figure}
+
+\textbf{<Head>.} <CLAIM, NUMBERS, MECHANISM, CAVEAT.>
+
+\section{Conclusions}
+
+<ONE PARAGRAPH, 4--5 SENTENCES.>
+
+\paragraph{Code availability.} <ONLY IF THE ASSIGNMENT ASKS FOR THE CODE IN A SEPARATE FILE.>
+
+\begin{thebibliography}{9}
+\footnotesize\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+\bibitem{<key>} <A.~B. Author>. <Title>. \emph{<Journal>}, <vol>(<issue>):<pages>, <year>.
+\end{thebibliography}
+
+% ONLY IF THE ASSIGNMENT ASKS FOR THE CODE AS AN APPENDIX (after the 3 pages); delete otherwise:
+\appendix
+\section{Code}
+\label{app:code}
+\lstinputlisting[language=Python]{../src/<FILE>.py}
+
+\end{document}

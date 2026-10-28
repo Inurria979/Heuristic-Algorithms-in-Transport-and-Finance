@@ -115,7 +115,7 @@ pub fn write_report(
     w("Informe generado por `pjs` (`TOP/src/rust`); se regenera con\n".into());
     w(format!(
         "```\ncd TOP\nignore/target/release/pjs.exe grid --reps {} --iters {} --geometric {} --softmax {} --seed {} \\\n    \
-         --png-dir results/figures/routes --report docs/informe_alpha.md src/data/top-data results\n```",
+         --png-dir results/figures/routes --report docs/informe_alpha.md data/top-data results\n```",
         cfg.reps,
         cfg.iterations,
         cfg.methods[0].param(),

@@ -84,7 +84,7 @@ pub fn write_ls_report(
     w(format!(
         "```\ncd TOP\nignore/target/release/pjs.exe grid --reps {} --iters {} --geometric {} --softmax {} --seed {} \\\n    \
          --png-dir results/figures/routes --report docs/informe_alpha.md \\\n    \
-         --ls-png-dir results/figures/routes_ls --ls-report docs/informe_busqueda_local.md src/data/top-data results\n```",
+         --ls-png-dir results/figures/routes_ls --ls-report docs/informe_busqueda_local.md data/top-data results\n```",
         cfg.reps,
         cfg.iterations,
         cfg.methods[0].param(),

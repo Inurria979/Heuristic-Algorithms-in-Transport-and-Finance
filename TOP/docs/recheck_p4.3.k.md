@@ -6,8 +6,8 @@ Se regenera, desde `TOP/`, con:
 
 ```
 ignore/target/release/recheck.exe --time 1 --runs 10 --seed 1 --grid-csv results/best_solution.csv --png results/figures/recheck_p4.3.k_1s_grid.png \
-    --bks-sol src/data/psoia_p4.3.k.sol.txt --bks-png results/figures/recheck_p4.3.k_bks.png --report docs/recheck_p4.3.k.md \
-    src/data/top-data/p4.3.k.txt results
+    --bks-sol data/psoia_p4.3.k.sol.txt --bks-png results/figures/recheck_p4.3.k_bks.png --report docs/recheck_p4.3.k.md \
+    data/top-data/p4.3.k.txt results
 ```
 
 Con tiempo de reloj por ejecución el recheck **no es reproducible exactamente**: el número de iteraciones depende de la carga de la máquina, así que al regenerarlo pueden cambiar las cifras de la sección 4 y la solución del recheck.
@@ -23,7 +23,7 @@ Con tiempo de reloj por ejecución el recheck **no es reproducible exactamente**
 - **PJS determinista:** la heurística de ahorros de Panadero et al. (2021) con el mejor α de la rejilla 0, 0.05, …, 1 (α = 0.40).
 - **Rejilla (la de la presentación):** el experimento principal, `results/best_solution.csv` y `results/best_routes.csv`: para cada α, 10 ejecuciones de GRASP de 10 iteraciones con cada aleatorización (geométrica y softmax), élite y búsqueda local (2-opt + inserción).
 - **Recheck:** lo mismo, pero cada ejecución de GRASP itera durante **1 s** en lugar de 10 iteraciones (unas 344 iteraciones de media), con las mismas semillas, las mismas reglas de élite y la misma búsqueda local. Tardó 35 s. La final sale de geometric, α = 0.55, ejecución 4: 627 antes de la búsqueda local, 21 clientes insertados.
-- **BKS:** la mejor solución conocida de la literatura, 919, en la columna BEST de `MA10-PSOMA-PSOiA-Chao-benchmark.xls` (Dang, Guibadj y Moukrim; es la de `src/data/bks_chao.csv`). Sus rutas son las de su fichero de solución, copiado sin cambios en [`src/data/psoia_p4.3.k.sol.txt`](../src/data/psoia_p4.3.k.sol.txt); allí los clientes se numeran desde 0, así que el cliente *a* es el nodo *a* + 1 del fichero de la instancia. Recalculadas aquí, las tres rutas dan exactamente la recompensa y la longitud que declara el fichero.
+- **BKS:** la mejor solución conocida de la literatura, 919, en la columna BEST de `MA10-PSOMA-PSOiA-Chao-benchmark.xls` (Dang, Guibadj y Moukrim; es la de `data/bks_chao.csv`). Sus rutas son las de su fichero de solución, copiado sin cambios en [`data/psoia_p4.3.k.sol.txt`](../data/psoia_p4.3.k.sol.txt); allí los clientes se numeran desde 0, así que el cliente *a* es el nodo *a* + 1 del fichero de la instancia. Recalculadas aquí, las tres rutas dan exactamente la recompensa y la longitud que declara el fichero.
 
 ## 3. Comparación
 
@@ -128,5 +128,5 @@ Recompensa de la determinista y de la mejor de las 10 ejecuciones de cada aleato
 - **Comprobación externa** de la final del recheck con `verify_routes`, que no comparte código con `pjs` (lee la instancia con su propio parser y recalcula las distancias):
 
 ```
-ignore/target/release/verify_routes.exe src/data/top-data results/recheck_p4.3.k_1s_grid_routes.csv results/recheck_p4.3.k_1s_grid_solution.csv
+ignore/target/release/verify_routes.exe data/top-data results/recheck_p4.3.k_1s_grid_routes.csv results/recheck_p4.3.k_1s_grid_solution.csv
 ```

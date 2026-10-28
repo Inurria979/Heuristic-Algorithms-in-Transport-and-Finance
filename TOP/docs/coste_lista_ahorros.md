@@ -224,7 +224,7 @@ medición:
    ```
 
 4. Compilar con `cargo build --release` y ejecutar desde `TOP/`:
-   `pjs.exe bench src/data/top-data <repeticiones>`.
+   `pjs.exe bench data/top-data <repeticiones>`.
 
 ```rust
 //! Temporary timing of the fixed cost of a GRASP run (savings list + greedy construction).

@@ -11,7 +11,7 @@
 //! - best_ls, routes and visited in best_solution.csv match the routes.
 //!
 //! Usage, from TOP/ (exit code 1 if any check fails):
-//!   ignore/target/release/verify_routes.exe src/data/top-data results/best_routes.csv results/best_solution.csv
+//!   ignore/target/release/verify_routes.exe data/top-data results/best_routes.csv results/best_solution.csv
 
 use std::collections::{BTreeMap, HashSet};
 use std::fs;

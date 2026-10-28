@@ -6,7 +6,7 @@ Informe generado por `pjs` (`TOP/src/rust`); se regenera con
 cd TOP
 ignore/target/release/pjs.exe grid --reps 10 --iters 10 --geometric 0.3 --softmax 1 --seed 1 \
     --png-dir results/figures/routes --report docs/informe_alpha.md \
-    --ls-png-dir results/figures/routes_ls --ls-report docs/informe_busqueda_local.md src/data/top-data results
+    --ls-png-dir results/figures/routes_ls --ls-report docs/informe_busqueda_local.md data/top-data results
 ```
 
 ## Método

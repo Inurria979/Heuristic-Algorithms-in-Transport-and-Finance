@@ -4,12 +4,12 @@ Informe generado por `pjs bks` (`TOP/src/rust`); se regenera con
 
 ```
 cd TOP
-ignore/target/release/pjs.exe bks --report docs/comparacion_bks_conjuntos.md src/data/bks_chao.csv results/best_solution.csv results/bks_by_set.csv
+ignore/target/release/pjs.exe bks --report docs/comparacion_bks_conjuntos.md data/bks_chao.csv results/best_solution.csv results/bks_by_set.csv
 ```
 
 ## Qué se compara
 
-- **BKS:** la mejor solución conocida de cada instancia, columna *BEST* de la hoja de resultados que publican Dang, Guibadj y Moukrim con PSOiA (`src/data/bks_chao.csv`; el original está en `ignore/downloads/solutions-psoia.zip`). En las 80 instancias de las tablas 3 y 4 de Panadero coincide con su BKS (Ke et al., 2016).
+- **BKS:** la mejor solución conocida de cada instancia, columna *BEST* de la hoja de resultados que publican Dang, Guibadj y Moukrim con PSOiA (`data/bks_chao.csv`; el original está en `ignore/downloads/solutions-psoia.zip`). En las 80 instancias de las tablas 3 y 4 de Panadero coincide con su BKS (Ke et al., 2016).
 - **Nuestros resultados:** la rejilla de [`informe_busqueda_local.md`](informe_busqueda_local.md) (`results/best_solution.csv`): la determinista con el mejor α, la mejor sin búsqueda local (determinista o GRASP de 10 iteraciones) y la final, con búsqueda local sobre las élite.
 - **Panadero, 128 hilos:** la distancia media al BKS de cada conjunto que da su figura 4 (1 s por hilo). El paper no publica los valores por instancia de p3 a p7, solo estas medias.
 - **Distancia:** 100 · (BKS − nuestra) / BKS, media por instancia, sobre las instancias con BKS > 0.

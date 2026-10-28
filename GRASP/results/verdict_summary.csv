@@ -1,0 +1,5 @@
+variant,P_superior_mean,BETTER,equal,worse
+Biased geometric,0.602,2,5,0
+Biased triangular,0.512,2,4,1
+Biased Zipf,0.449,0,6,1
+Biased softmax,0.488,0,7,0

@@ -1,9 +1,14 @@
 # CLAUDE.md
 
 Prácticas del máster *Heuristic Algorithms in Transport and Finance*. Una carpeta por
-problema, cada una es un proyecto uv independiente. El `README.md` de la raíz es la
+problema, cada una es un proyecto uv independiente (salvo `TOP/`, que es Rust, y `DTOP/`, sin
+código). El `README.md` de la raíz es la
 referencia general; cada subproyecto tiene su propio `README.md` con modelo, método y
 resultados, y puede tener su propio `CLAUDE.md` (hoy solo `POP/`), que manda sobre este.
+
+**Al empezar una sesión, lee `scratchpad.md` (raíz):** notas de traspaso con el estado del
+trabajo, las revisiones hechas y lo pendiente. Actualízalo al terminar algo que afecte a varios
+proyectos; lo de un solo proyecto va en su `docs/` (p. ej. `TOP/docs/scratchpad.md`).
 
 | Carpeta | Problema | Estado |
 |---|---|---|
@@ -11,13 +16,20 @@ resultados, y puede tener su propio `CLAUDE.md` (hoy solo `POP/`), que manda sob
 | `TSP/` | Travelling Salesman (vecino más próximo y greedy edge, TSPLIB) | Código terminado |
 | `VRP/` | Capacitated Vehicle Routing, heurística de ahorros de Clarke & Wright (33 instancias A/B/E/F/M/P) | Terminado (código, artículo y presentación) |
 | `DTOP/` | Dynamic Team Orienteering (Transformers + RL) | Terminado, sin código (presentación en clase) |
+| `TOP/` | Team Orienteering, heurística PJS + GRASP + búsqueda local, en Rust (387 instancias de Chao) | Código, artículo y presentación terminados |
+| `GRASP/` | GRASP con ahorros y aleatorización sesgada para el TSP (10 instancias TSPLIB) | Código, artículo y presentación terminados |
+| `PFSP/` | Permutation Flow-Shop, NEH / RandNEH / ILS-ESP con β adaptativo (5 instancias de Taillard) | Código, artículo y presentación terminados; faltan las instancias en `data/` |
 
 ## Estructura obligatoria de cada subproyecto
 
-Todo subproyecto con código (`POP/`, `TSP/`, `VRP/` y los que se añadan) tiene estas carpetas:
+Todo subproyecto con código (`POP/`, `TSP/`, `VRP/`, `TOP/`, `GRASP/`, `PFSP/` y los que se
+añadan) tiene estas carpetas:
 
-- `src/` — código: notebooks y módulos `.py`. Nada más, salvo `src/cpp/` en `VRP/`
-  (fuentes C++; se compilan con Zig instalado vía uv y el ejecutable va a `ignore/bin/`).
+- `src/` — código: notebooks y módulos `.py`. Nada más, salvo dos excepciones:
+  - `VRP/src/cpp/`: fuentes C++; se compilan con Zig instalado vía uv y el ejecutable va a
+    `ignore/bin/`.
+  - `TOP/src/rust/`: proyecto Cargo con todo el flujo de TOP. `cargo` se lanza siempre desde
+    `TOP/src/rust`, para que `.cargo/config.toml` mande los compilados a `TOP/ignore/target`.
 - `data/` — instancias del problema (benchmarks, soluciones de referencia), sin modificar.
 - `docs/` — PDFs del profesor (transparencias, enunciados, papers que da) y documentos
   propios (artículos `.tex` + PDF, guiones, notas). **Se sube a GitHub, PDFs incluidos.**
@@ -26,8 +38,9 @@ Todo subproyecto con código (`POP/`, `TSP/`, `VRP/` y los que se añadan) tiene
   archivados, pruebas). Está en `.gitignore`.
 
 En la raíz de cada subproyecto solo quedan `README.md`, `CLAUDE.md` (opcional),
-`pyproject.toml`, `uv.lock` y `.python-version`. No dejes ficheros sueltos: colócalos en
-una de las cinco carpetas y, si no está claro cuál, pregunta.
+`pyproject.toml`, `uv.lock` y `.python-version` (en `TOP/`, solo `README.md`: no tiene entorno
+de Python). No dejes ficheros sueltos: colócalos en una de las cinco carpetas y, si no está
+claro cuál, pregunta.
 
 `DTOP/` es la excepción: **no contiene código y está terminado**. La actividad consistía
 solo en hacer una presentación en clase, así que la carpeta guarda únicamente los papers y
@@ -44,14 +57,18 @@ en `DTOP/` salvo que se pida expresamente.
 
 ## Entorno
 
-- Python 3.14 y **uv** en todos los proyectos. No hay `pyproject.toml` en la raíz ni
-  workspace de uv: cada carpeta resuelve y bloquea sus dependencias por separado.
+- Python 3.14 y **uv** en todos los proyectos, salvo `GRASP/` y `PFSP/`, que fijan 3.13 porque
+  sus resultados se generaron con esa versión (y usan Numba). No hay `pyproject.toml` en la
+  raíz ni workspace de uv: cada carpeta resuelve y bloquea sus dependencias por separado.
+- `TOP/` es solo Rust (rayon, perfil release agresivo único): experimentos, figuras e informes
+  van en el crate; no se añade Python a su flujo.
 - Trabaja siempre desde dentro del subproyecto: `cd TSP && uv sync`.
 - Dependencias con `uv add` / `uv add --dev`, nunca con `pip`. Los `uv.lock` se suben.
 - Ejecutar un notebook sin interfaz (desde la carpeta del subproyecto):
   `uv run --with nbconvert jupyter nbconvert --to notebook --execute --inplace src/<nb>.ipynb`
 - Windows: si uv falla al enlazar ficheros, usa `UV_LINK_MODE=copy`.
-- Algunos notebooks tardan (POP ~6 min, TSP ~75 s): no los relances sin necesidad.
+- Algunos experimentos tardan (POP ~6 min, TSP ~75 s, GRASP ~22 min, PFSP con
+  `PFSP_RERUN=1` mucho más, rejilla de TOP ~2 min): no los relances sin necesidad.
 
 ## Git
 
@@ -60,7 +77,7 @@ en `DTOP/` salvo que se pida expresamente.
 - No se sube: `ignore/`, `.venv/`, cachés de Python y herramientas, auxiliares de LaTeX.
 - No añadas reglas al `.gitignore` que excluyan PDFs de `docs/`.
 - Git está en Windows con `core.ignorecase=true`: los nombres de carpeta van en mayúsculas
-  (`POP`, `TSP`, `VRP`, `DTOP`); para cambiar solo mayúsculas/minúsculas hay que pasar por
+  (`POP`, `TSP`, `VRP`, `DTOP`, `TOP`, `GRASP`, `PFSP`); para cambiar solo mayúsculas/minúsculas hay que pasar por
   un nombre intermedio o por `git rm --cached`.
 - Solo haz commit o push cuando se pida.
 
@@ -74,3 +91,19 @@ en `DTOP/` salvo que se pida expresamente.
   cambian cifras, actualiza a la vez notebook, README y documentos de `docs/`.
 - Nuevo proyecto: crea las cinco carpetas, sigue la receta de "Adding a new project" del
   README raíz y añade una fila a la tabla de proyectos del README y de este fichero.
+
+## Artículos de 3 páginas
+
+- Se escriben y revisan con `/paper-loop <CARPETA> [rondas]`, que alterna los agentes
+  `paper-writer` y `paper-reviewer` de `.claude/agents/`. Las reglas de estilo, sacadas de los
+  artículos de POP y VRP, están en `.claude/skills/paper-loop/guia_estilo.md`.
+- Los informes de revisión quedan en `<CARPETA>/ignore/paper_loop/` y no se suben.
+
+## Orquestador y agentes de código
+
+- `/orquestar <CARPETA> <objetivo>` (o `claude --agent orquestador`) planifica el trabajo y lo
+  reparte entre `code-writer`/`code-reviewer` (bucle de código), `paper-writer`/`paper-reviewer`
+  (bucle de `/paper-loop`) y `Explore`. El orquestador no escribe código ni artículos.
+- Orden habitual: código → `results/` → README → artículo.
+- Plan en `<CARPETA>/ignore/orquestador/plan.md`; informes de código en
+  `<CARPETA>/ignore/code_loop/<tarea>/`. No se suben.
