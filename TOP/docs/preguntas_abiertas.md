@@ -9,7 +9,8 @@ El enunciado pide «your own Python program» y el código es Rust. El artículo
 justifica en §4 (Python solo como comprobación independiente). ¿Vale así o hay que plantearlo de
 otra forma? El revisor avisa: si el profesor no acepta Rust, esto pasa a bloqueante.
 
-**Respuesta:**
+**Respuesta:** Al profesor le gustó que se usara Rust; no es un problema ni bloquea (02-11-2026). La
+frase de la comprobación en Python se quita del artículo: no hay código ni salida en el repo.
 
 ## 2. Referencia de Chao et al. (1996)
 
@@ -46,6 +47,6 @@ En `docs/` no hay transparencias del curso sobre el TOP (solo `homework.png`), a
 
 ---
 
-**Estado del bucle:** APROBADO en la ronda 3 (0 B, 0 I, 3 menores en `ignore/paper_loop/revision_r3.md`).
-La pregunta 1 es la crítica: si el profesor no acepta Rust, pasa a bloqueante. Cuando respondáis,
+**Estado del bucle:** APROBADO en la ronda 4 (0 B, 0 I, 11 menores en `ignore/paper_loop/revision_r4.md`).
+La pregunta 1 ya está respondida (02-11-2026): Rust no es un problema. Cuando respondáis a las demás,
 relanzad `/paper-loop TOP 1`.

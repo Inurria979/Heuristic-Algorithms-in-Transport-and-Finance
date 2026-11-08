@@ -52,9 +52,9 @@ them with 2-opt and compare the classic uniform restricted candidate list (RCL) 
 \emph{biased randomisation} rules --- geometric, triangular, Zipf and softmax --- whose probability
 decreases along the savings list. Each rule is tuned on three separate
 instances and tested on seven TSPLIB instances with 51--280 cities, 20 runs of 150 iterations each.
-GRASP lowers the mean gap of the greedy savings tour plus 2-opt from $5.07\,\%$ to
+The classic GRASP lowers the mean gap of the greedy savings tour plus 2-opt from $5.07\,\%$ to
 $2.22\,\%$; the geometric rule lowers it to $1.70\,\%$ at the same cost per run, and is significantly
-better on two instances and never worse. A Friedman test across instances detects no global
+better on two instances and never significantly worse. A Friedman test across instances detects no global
 difference ($p=0.76$).
 \end{abstract}
 
@@ -62,14 +62,14 @@ difference ($p=0.76$).
 
 A salesman has to visit $n$ cities once each and return home along the shortest possible tour. This
 is the Travelling Salesman Problem (TSP), the standard NP-hard routing problem: exact methods need specialised codes whose running time grows quickly
-with $n$, so heuristics are used when a good tour is needed fast. A Greedy Randomized Adaptive Search Procedure (GRASP)~\cite{feo1995} is a multi-start method: every iteration builds a solution by choosing, at each step, one of the best candidates at random, improves it by local search, and the best solution is returned.
+with $n$, so heuristics are used when a good tour is needed fast. A Greedy Randomized Adaptive Search Procedure (GRASP)~\cite{feo1995} is a multi-start method: every iteration builds a solution by choosing, at each step, one of the best candidates at random, and improves it by local search; the best solution found is returned.
 
 The classic GRASP draws uniformly from a \emph{restricted candidate list} (RCL). Juan et
 al.~\cite{juan2011} used instead, in the savings heuristic of Clarke and Wright~\cite{cw1964}, a
 geometric distribution over the positions of the sorted savings list, so that better candidates
-are always more likely but none is excluded; this is \emph{biased randomisation}. We compare four biased rules with the classic RCL in a GRASP for the TSP, with everything else fixed. We deal only with the symmetric Euclidean TSP and a plain 2-opt local search.
+are always more likely; this is \emph{biased randomisation}. We compare four biased rules with the classic RCL in a GRASP for the TSP, with everything else fixed. We deal only with the symmetric Euclidean TSP and a plain 2-opt local search.
 
-The test instances are seven from TSPLIB~\cite{tsplib} whose optimal tours are published:
+We test on seven TSPLIB instances~\cite{tsplib} whose optimal tours are published:
 \texttt{eil51}, \texttt{berlin52}, \texttt{st70}, \texttt{eil76}, \texttt{kroA100}, \texttt{ch130}
 and \texttt{a280}. The number in the name is the number of cities, so \texttt{a280} has $n=280$. All are of type \texttt{EUC\_2D} (city coordinates), and the optimum is the length of the companion tour \texttt{.opt.tour}. Below we state the model and the method, and report quality, time and significance tests.
 
@@ -79,7 +79,7 @@ and \texttt{a280}. The number in the name is the number of cities, so \texttt{a2
 Let $V=\{1,\dots,n\}$ be the cities and $d(i,j)=d(j,i)$ the Euclidean distance between $i$ and $j$,
 rounded to the nearest integer as TSPLIB prescribes for its published optima. A tour is a permutation $\pi$ of $V$, and the TSP reads
 \begin{equation}
-\min_{\pi}\ \sum_{k=1}^{n} d(\pi_k,\pi_{k+1})
+\min_{\pi}\ \sum_{t=1}^{n} d(\pi_t,\pi_{t+1})
 \qquad\text{s.t.}\qquad
 \pi=(\pi_1,\dots,\pi_n)\ \text{is a permutation of } V,\qquad \pi_{n+1}=\pi_1 ,
 \label{eq:model}
@@ -115,7 +115,7 @@ selection rule.
 \item \textbf{Merge} the two paths through the chosen pair.
 \end{enumerate}
 After $n-2$ merges a single path covers the $n-1$ cities, and joining its two ends to the hub closes
-the tour. The list shrinks after every merge, which is the \emph{adaptive} part of GRASP; always taking
+the tour. The list shrinks after every merge, the only \emph{adaptive} element here; always taking
 the largest saving gives the classic savings heuristic. Let $m$ be the length of the filtered list and
 $s_k$ its savings~\eqref{eq:savings}. The five rules are:
 \begin{itemize}
@@ -129,9 +129,9 @@ positions (at least 3) and is zero afterwards.
 \item \textbf{Softmax.} $P(k)\propto\exp(z_k/T)$ with $z_k=(s_k-s_0)/(s_0-s_{m-1})\in[-1,0]$: it uses
 the normalised \emph{value} of the saving, not its position.
 \end{itemize}
-The last four have no cut-off: every feasible pair keeps some probability. Geometric, triangular and Zipf look only at the rank, so their diversity does not
-depend on how the saving values are distributed; the RCL and softmax do. Each rule has one parameter, between
-greedy (every iteration builds the same tour) and nearly uniform (poor tours), that must be tuned.
+Geometric, Zipf and softmax have no cut-off: every feasible pair keeps some probability; the triangular rule has one, but on the rank, not the value. Geometric, triangular and Zipf look only at the rank, so their diversity does not
+depend on how the saving values are distributed; the RCL and softmax do. Each rule has one parameter to tune, from
+greedy (every iteration builds the same tour) to nearly uniform (poor tours).
 
 The local search is \emph{2-opt}: for two non-adjacent edges $(a,b)$ and $(c,d)$ of the tour, if
 $d(a,c)+d(b,d)<d(a,b)+d(c,d)$ the segment $b\dots c$ is reversed, so that $(a,c)$ and $(b,d)$ replace them. The first improving move is applied until none is left.
@@ -145,12 +145,12 @@ geometric and triangular rules sample the position directly by inverting their d
 functions; Zipf and softmax build a weight for every candidate and sample from the
 cumulative sum. The 2-opt, sequential by nature, is compiled with \texttt{numba}.
 
-\textbf{Tuning.} Every rule receives the same effort: a grid of 6--8 values from almost greedy to very
-random, evaluated on three instances \emph{not} used for testing (\texttt{kroB100}, \texttt{eil101},
-\texttt{ch150}; the optimum of \texttt{kroB100}, 22\,141, is fixed in the code) with 6 runs of 80 iterations and seeds different from the test ones. The value with the
+\textbf{Tuning.} Each rule has a grid of 6--8 values from almost greedy to very
+random, and every grid value receives the same effort: three instances \emph{not} used for testing (\texttt{kroB100}, \texttt{eil101},
+\texttt{ch150}; the optimum of \texttt{kroB100}, 22\,141, is fixed in the code), with 6 runs of 80 iterations and seeds different from the test ones. The value with the
 lowest mean gap is kept: $\alpha=0.05$, $\beta=0.4$, $f=0.002$, $e=3$ and $T=0.02$, none at the edge of
 its grid. Tuning took 306\,s. Juan et al.~\cite{juan2011} draw $\beta$ from $U(0.05,0.25)$ at every
-selection, need no tuning and apply no local search; with 2-opt after every construction, our tuning
+selection, need no tuning and apply no 2-opt; with 2-opt after every construction, our tuning
 prefers a fixed and greedier $\beta=0.4$ (0.2 was also in the grid).
 
 \textbf{Protocol.} Each rule runs 20 times on each test instance, 150 iterations per run, with seeds
@@ -160,7 +160,7 @@ final cost (the objective of~\eqref{eq:model}), $\text{gap}=100\,(\text{cost}-\t
 with the two-sided Wilcoxon rank-sum test on the 20 final costs, with Holm correction over the 28
 comparisons at the $5\,\%$ level; the Friedman test compares the five rules at once on the mean
 gaps, with the instances as blocks. As a reference we also run the RCL with $\alpha=0$ (ties broken at random with a
-fixed seed), with and without 2-opt, and check that each of these tours is a permutation of the
+fixed seed), with and without 2-opt, and check that each constructed tour is a permutation of the
 cities.
 
 \section{Computational results}
@@ -170,9 +170,9 @@ Table~\ref{tab:results} gives the mean gap of the 20 runs for every rule and ins
 
 \begin{table}[!t]
 \centering
-\caption{Mean gap (\%) to the TSPLIB optimum over 20 runs of 150 iterations. \emph{CW}: greedy savings tour ($\alpha=0$),
+\caption{Mean gap (\%) to the TSPLIB optimum over 20 runs of 150 iterations. \emph{CW}: greedy savings tour ($\alpha=0$), a single run,
 without and with 2-opt. Superscripts: $^{+}$ significantly better, $^{-}$ significantly
-worse than the RCL (Wilcoxon rank-sum, Holm, $5\,\%$). Last row: mean wall-clock time per run on
+worse than the RCL (Wilcoxon rank-sum, Holm, $5\,\%$). Better/equal/worse counts these outcomes (equal: no significant difference). Last row: mean wall-clock time per run on
 \texttt{a280}.}
 \label{tab:results}
 \scriptsize
@@ -202,36 +202,32 @@ Time per run, \texttt{a280} (s) & & & & & 5.81 & 5.33 & 5.53 & 10.18 & 9.93 \\
 \includegraphics[width=0.85\textwidth]{gap_boxplots.png}
 \caption{Gap (\%) of the 20 runs per instance and rule (boxes: quartiles and median; whiskers and
 circles: spread and outliers). Colours, left to right: RCL (blue), geometric (orange), triangular
-(green), Zipf (yellow) and softmax (purple). Panel and legend labels are in Spanish
+(green), Zipf (yellow) and softmax (purple). The title and legend are in Spanish
 (\emph{GRASP est\'andar} = RCL, \emph{Sesgada} = biased).}
 \label{fig:box}
 \end{figure}
 
 \textbf{GRASP works.} The greedy savings tour ($\alpha=0$) is $7.60\,\%$ above the optimum on average, and
-2-opt brings it to $5.07\,\%$. With a randomised construction and 150 iterations the mean gap falls to $2.10$--$2.25\,\%$ with any rule but the geometric one, and to $1.70\,\%$ with it; the classic GRASP alone removes $56\,\%$ of the error. The mechanism is
+2-opt brings it to $5.07\,\%$. With a randomised construction and 150 iterations the mean gap falls to $2.10$--$2.25\,\%$ with any rule but the geometric one, and to $1.70\,\%$ with it; the classic GRASP removes $56\,\%$ of the remaining error. The mechanism is
 diversity: each randomised tour leads 2-opt to a different local optimum, and only the best of 150 is
 kept.
 
 \textbf{Geometric vs.\ RCL.} The geometric rule has the lowest mean gap, $23\,\%$ below the RCL, and
-the lowest mean best gap over the 20 runs ($0.81\,\%$ against $1.70\,\%$ for the RCL). It is significantly better
-on \texttt{berlin52} ($3.69\to0.93\,\%$) and \texttt{a280} ($5.16\to4.31\,\%$), equal on the other five
-and never worse; a run of the geometric rule beats a run of the RCL (ties counted as one half) with mean
-probability $0.60$. The reason is that the RCL cut-off is set on the normalised saving value, so the
-number of candidates it admits depends on how the values are spread at the head of the list, and the
-rule cannot be tuned per instance: on \texttt{eil51} the mean and the best gap of the RCL are both
-$1.41\,\%$, so the 20 runs end in the same tour (the flat blue box in Figure~\ref{fig:box}), and on
+the lowest best-of-20 gap averaged over the instances ($0.81\,\%$ against $1.70\,\%$ for the RCL). It is significantly better
+on \texttt{berlin52} ($3.69\to0.93\,\%$) and \texttt{a280} ($5.16\to4.31\,\%$), not significantly different on the other five; a run of the geometric rule beats a run of the RCL (ties counted as one half) with mean
+probability $0.60$. A likely reason is that the RCL cut-off is set on the normalised saving value, so with a single $\alpha$ the
+number of candidates it admits depends on how the values are spread at the head of the list: on \texttt{eil51} the mean and the best gap of the RCL are both
+$1.41\,\%$, so the 20 runs end with the same cost, 432 (the flat blue box in Figure~\ref{fig:box}), and on
 \texttt{berlin52} the best of 20 runs is still $3.62\,\%$. A rank-based rule fixes the probability
 of each position whatever the values are. 
 
 \textbf{The other rules.} The triangular rule is mixed: better on \texttt{eil51} and \texttt{berlin52},
 worse on \texttt{a280}, possibly because $f=0.002$, tuned on 100--150 cities, admits 78 positions at
-the first step of \texttt{a280} against 10 on \texttt{kroB100}. Zipf is never better than the RCL and is worse on \texttt{st70}. Softmax is equal to the RCL on
-all seven instances, and its \texttt{eil51} box is also flat. Both rules use the same normalised
+the first step of \texttt{a280} against 10 on \texttt{kroB100}. Zipf is never significantly better than the RCL and is worse on \texttt{st70}. Softmax never differs significantly from the RCL, and its \texttt{eil51} box is also flat. Softmax and the RCL use the same normalised
 value $z_k$, and with $T=0.02$ a candidate at $z_k=-0.05$, the edge of the RCL with $\alpha=0.05$,
 weighs $e^{-2.5}\approx0.08$ relative to the best one: softmax is a smooth version of the same RCL.
 
-\textbf{Time.} A run takes 0.14--10.18\,s, growing with $n$. The geometric and triangular rules cost the same as the RCL or less (0.77--0.95 times its time). Zipf and softmax, which weigh every feasible pair at every step, need 1.26--1.75 times the RCL time (about 10\,s against 5.81\,s on
-\texttt{a280}). Times are means of 20 runs on one machine, comparable only with each other.
+\textbf{Time.} A run takes on average 0.14--10.18\,s, growing with $n$. The geometric and triangular rules cost the same as the RCL or less (about 0.8--0.95 times its time). Zipf and softmax, which weigh every feasible pair at every step, need about 1.3--1.75 times the RCL time. Times are means of 20 runs on one machine, comparable only with each other.
 
 \textbf{Statistical caution.} The Friedman test over the seven instances gives $\chi^2=1.87$,
 $p=0.76$: no global difference between the rules is detected. The evidence for the
@@ -239,15 +235,14 @@ geometric rule is moderate (two significant wins, none against), and the paramet
 
 \section{Conclusions}
 
-With 2-opt, a GRASP built on the savings list more than halves the gap of the greedy savings tour ($5.07$ to $2.22\,\%$ with the classic RCL). Replacing the uniform
-RCL by a geometric distribution over ranks lowers the mean gap to $1.70\,\%$ at no extra cost, because
+A GRASP built on the savings list more than halves the gap of the greedy savings tour followed by 2-opt ($5.07$ to $2.22\,\%$ with the classic RCL). Replacing the uniform
+RCL by a geometric distribution over ranks lowers the mean gap to $1.70\,\%$ at no extra cost, probably because
 its diversity does not depend on how the saving values are distributed; Zipf, softmax and the triangular rule do not
 consistently improve on the RCL. The evidence is moderate: two significant wins and a non-significant Friedman test. The next steps are larger instances and more runs, a comparison at equal CPU
 time, and a stronger local search, which may shrink the differences between rules.
 
 \paragraph{Code availability.} All computations are reproducible from the notebook
-\texttt{GRASP\_TSP\_savings\_biased\_EN.ipynb}, delivered separately (tuning about 5\,min, experiment
-about 17\,min on our machine).
+\texttt{GRASP\_TSP\_savings\_biased\_EN.ipynb}, delivered separately.
 
 \begin{thebibliography}{9}
 \footnotesize\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}

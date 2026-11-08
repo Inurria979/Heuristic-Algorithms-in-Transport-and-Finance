@@ -1,7 +1,7 @@
 # Scratchpad del repositorio — traspaso entre sesiones
 
 Notas internas, en español, para que otra sesión (de Claude o de un compañero) siga desde
-aquí. Última actualización: **28-10-2026**. Las notas de un solo proyecto van en su propio
+aquí. Última actualización: **02-11-2026**. Las notas de un solo proyecto van en su propio
 `docs/` (p. ej. [`TOP/docs/scratchpad.md`](TOP/docs/scratchpad.md)); aquí va lo que afecta a
 varios proyectos o al repositorio entero.
 
@@ -26,7 +26,8 @@ Todo está en `.claude/` y se sube a git para que lo tengan los compañeros
 
 Bucle de código: carpeta por tarea, `<P>/ignore/code_loop/<tarea>/` (`estado_inicial.txt`,
 `cambios_r{k}.md`, `revision_r{k}.md`). Dentro de un subproyecto, las tareas de código van una
-detrás de otra. Todavía **no se ha probado** ningún bucle de código ni `/orquestar` de verdad.
+detrás de otra. `/orquestar` se usó por primera vez el 02-11-2026 con tres bucles de artículo en
+paralelo, y funcionó. El bucle de código **sigue sin probarse**.
 
 ## 2. Reorganización del 28-10-2026
 
@@ -87,6 +88,12 @@ reglas de arriba.
 Las cifras de las tablas principales coinciden con el código en los cinco. Los problemas son de
 redacción, de cifras sin fuente en el código o de detalles del algoritmo mal descritos.
 Líneas referidas al `.tex` del 28-10-2026.
+
+**Actualización 02-11-2026:** GRASP, TOP y PFSP ya están corregidos, sin commit (estado en la
+sección 4). Lo de abajo sigue siendo el detalle de lo encontrado, pero sus líneas ya no coinciden.
+Decisiones de los autores: TOP I3, quitar la comprobación en Python; TOP I4, matizar («in
+preliminary trials»); PFSP I2, quitar la frase; PFSP M3, la máquina no era compartida. Al profesor
+le gustó que TOP se hiciera en Rust: no es un problema.
 
 #### GRASP (`GRASP/docs/GRASP for the Travelling Salesman Problem.tex`)
 
@@ -194,13 +201,28 @@ Líneas referidas al `.tex` del 28-10-2026.
    subido y no están en el equipo. Sin ellas el notebook no arranca, ni siquiera en modo lectura
    (`PFSP_RERUN=0`), porque la celda 3 lee las instancias. Preguntar a los autores de dónde
    salieron.
-2. **Corregir los artículos por entregar** (GRASP, TOP, PFSP): `/paper-loop <P>` pasando como
-   notas la lista de su sección 3. Antes, los autores deciden TOP I3 e I4 y PFSP I2 y M3.
-3. **POP:** sacar `results/figures/frontiers.png` de la salida guardada de la celda 14 (sin
+2. **Artículos por entregar: corregidos el 02-11-2026 con `/orquestar`, falta el commit.** GRASP,
+   APROBADO en r4 (`revision_r4.md`); TOP, APROBADO en r4; PFSP, APROBADO en r5. Los tres PDF dan
+   3 páginas. Falta decidir:
+   - Fecha: los tres dicen «October 2026».
+   - Longitud de la prosa frente al techo de 1 950: PFSP 2 369 y TOP 2 015.
+   - Preguntas sin responder en cada `docs/preguntas_abiertas.md`.
+3. **Materiales que ya no coinciden con los artículos** (ninguno se ha tocado):
+   - GRASP: «no cut-off» de la triangular en la celda 6 del notebook, la diapositiva 6 y
+     `presentation_script.md` l. 109. `GRASP/README.md` l. 6, 77, 79 y 83 («over the whole sorted
+     savings list», «never worse», «never better», «up to 1.75 times more»). La presentación
+     también dice «never worse».
+   - TOP: 38 700 ejecuciones en Python en la diapositiva 8 y `guion_presentacion.md` l. 185;
+     ~900 000 construcciones (el artículo da ~880 000) también en
+     `metodos_y_comparacion_panadero.md`; 140 s en la presentación; 2.04 % frente a 2.85 % sin avisar
+     del denominador en la presentación y en `comparacion_bks_conjuntos.md`.
+   - PFSP: la presentación dice «shared machine», «right after an improvement» y
+     «Geo(0.1)–(0.2)»; la celda 32 del notebook repite «Geo(0.1)–(0.2)», «within the noise» y 0.71/0.63.
+4. **POP:** sacar `results/figures/frontiers.png` de la salida guardada de la celda 14 (sin
    ejecutar nada) y decidir qué hacer con los CSV antiguos de `results/`.
-4. **VRP:** corregir en su README la velocidad de C++ (15–65 → 11.5–58).
-5. Las carpetas `PFSP/results/v1_una_construccion/` y `v2_antes_geoadapt/` llevan notebooks
+5. **VRP:** corregir en su README la velocidad de C++ (15–65 → 11.5–58).
+6. Las carpetas `PFSP/results/v1_una_construccion/` y `v2_antes_geoadapt/` llevan notebooks
    dentro de `results/`. Se dejan ahí porque son la única fuente de cifras que cita el
    artículo.
-6. TOP: lo que queda de [`TOP/docs/scratchpad.md`](TOP/docs/scratchpad.md) §pendiente
+7. TOP: lo que queda de [`TOP/docs/scratchpad.md`](TOP/docs/scratchpad.md) §pendiente
    (tamaño de `results/`, unos 130 MB).

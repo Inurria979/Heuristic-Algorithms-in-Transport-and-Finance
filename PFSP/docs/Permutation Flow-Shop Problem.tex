@@ -53,7 +53,7 @@ version RandNEH and the iterated local search ILS-ESP of Juan et al.\ (2014) in 
 add a geometric distribution whose parameter $\beta$ grows after every three failed constructions. On
 five Taillard instances with 20 to 500 jobs, every RandNEH variant beats NEH on average, by 0.10--0.73
 gap points with a biased distribution. The adaptive $\beta$ matches a well-chosen fixed $\beta$ except
-on the 20-job instance, but needs more constructions than $\beta=0.5$--$0.7$ (77 against 53\,ms on 500
+on the 20-job instance, but needs more constructions than $\beta=0.5$--$0.7$ (11.3 against 5.6--6.9 on 200
 jobs). With a budget of $2\,nm$\,ms, the six ILS-ESP starts end within 0.3 points, close to the noise
 between seeds.
 \end{abstract}
@@ -142,21 +142,23 @@ next run starts again at $0.05$. The only signal used is whether a construction 
 \textbf{ILS-ESP}~\cite{juan2014} starts from a RandNEH solution improved by local search, the
 \emph{base solution}, and repeats until the time is up:
 \begin{enumerate}
-\item \textbf{Enhanced swap.} Swap the jobs at two random positions, then move each of the two jobs to
-its best position to its left, first the one nearer the front.
-\item \textbf{Local search} (our choice, see Section~\ref{sec:impl}). Remove every job, in random order, and reinsert it at its best position;
-repeat until a full pass brings no improvement. The result is a local optimum for insertion moves.
+\item \textbf{Enhanced swap.} Swap the jobs at two random positions and shift each left, the one nearer the
+front first: each goes to the place that minimises the makespan of the partial sequence ending at it,
+ignoring the jobs to its right.
+\item \textbf{Local search} (our choice). Remove every job, in random order, and reinsert it at its best position;
+repeat until a full pass brings no improvement.
 \item \textbf{Demon acceptance.} If the new solution is better, it becomes the base solution and its
-improvement is stored. A worse solution is accepted only right after an improvement and only if it is
-worse by no more than that improvement, which lets the search leave a local optimum without drifting.
+improvement is stored. A worse solution is accepted only if the last accepted change was an improvement
+and only if it is worse by no more than that improvement, which lets the search leave a local optimum
+without drifting.
 \end{enumerate}
-The method has no parameters besides the time budget.
+The method returns the best solution found and has no parameters besides the time budget.
 
 \section{Implementation}
 \label{sec:impl}
 
-The code is a single Python notebook, \texttt{PFSP\_RandNEH\_ILS\_ESP\_en.ipynb} (Python~3.13), with NumPy, pandas,
-SciPy and matplotlib; every inner loop, from the makespan to the ILS iterations, is compiled with Numba
+The code is a Python notebook, \texttt{PFSP\_RandNEH\_ILS\_ESP\_en.ipynb} (Python~3.13), the English
+version of the one we ran, with NumPy, pandas, SciPy and matplotlib; every inner loop, from the makespan to the ILS iterations, is compiled with Numba
 (\texttt{@njit}). The key function,
 \texttt{insert\_best\_position(p, perm, k)}, moves job \texttt{perm[k]} to its best position within
 \texttt{perm[0..k]} in $O(km)$; NEH, the local search and the enhanced swap are all built on it.
@@ -167,17 +169,19 @@ number of eligible jobs. The local search is not detailed either; ours is the in
 of Section~\ref{sec:method}.
 
 Two checks precede the experiments: the accelerated NEH returns the same permutation and makespan as
-a naive NEH on \texttt{tai001} and \texttt{tai051} (1\,286 and 4\,082), and every RandNEH output is a
-valid permutation whose makespan, recomputed from scratch, matches and never exceeds NEH.
+a naive NEH on \texttt{tai001} and \texttt{tai051} (1286 and 4082), and, on a sample of one run per
+distribution and instance (five for Geo-adapt), the RandNEH output is a valid permutation whose makespan matches a
+recomputation and never exceeds NEH's.
 
 \textbf{Experiment A} (constructive phase) runs NEH once and the RandNEH loop 30 times per distribution
-and instance with eight fixed distributions --- Tri, Geo($\beta$) for $\beta\in\{0.05, 0.1, 0.2, 0.3,
+and instance, in one process, with eight fixed distributions --- Tri, Geo($\beta$) for $\beta\in\{0.05, 0.1, 0.2, 0.3,
 0.5, 0.7\}$ and Unif --- plus Geo-adapt. \textbf{Experiment B} keeps ILS-ESP intact and changes only the
 start (NEH, Tri, Geo(0.1), Geo(0.3), Unif, Geo-adapt), with 10 seeds per start and instance and the same
 budget for all, $2\,nm$\,ms (0.2\,s for \texttt{tai001}, 20\,s for \texttt{tai117}), initial
 construction included. Since Numba has no clock in compiled code, the budget is checked from Python
-between blocks of about 20\,ms of iterations. The 300 runs of Experiment B took 17.2\,min on two worker
-processes of a shared machine. The metric is $\text{gap}=100\,(C_{\max}-\text{BKS})/\text{BKS}$, and
+between blocks of iterations of about 20\,ms (one iteration of about 80\,ms on \texttt{tai117}), so the
+last block may end after the budget: 3 of the 300 runs of Experiment B improved in that last block. The 300
+runs took 17.2\,min on two worker processes. The metric is $\text{gap}=100\,(C_{\max}-\text{BKS})/\text{BKS}$, and
 each start is compared with NEH by a two-sided Mann--Whitney test, without correction for multiple
 comparisons. The Geo-adapt parameters were fixed before the runs, after a preliminary check of fixed
 $\beta$ from 0.3 to 0.9, and were not tuned.
@@ -229,17 +233,18 @@ plateau: on each instance with $n\ge50$ the three mean gaps lie within 0.15 poin
 constructions per run. The triangular distribution is slightly worse on average (3.39) and needs more constructions
 (14.3--14.5 on \texttt{tai081} and \texttt{tai101}, 143\,ms against 53\,ms for Geo(0.7) on
 \texttt{tai117}), and the uniform is the most expensive (149.9 constructions, 2.4\,s): the weaker the
-bias, the further a construction strays from NEH and the less likely it is to beat it. Differences of
-0.1--0.2 points between distributions are within the noise of 30 runs and are not a ranking; times come
-from a shared machine and are only an order of magnitude.
+bias, the further a construction strays from NEH and the less likely it is to beat it. Experiment A has
+no significance test, so differences of 0.1--0.2 points between distributions should not be read as a
+ranking. Times are indicative: they follow the constructions (15--17\,ms each on \texttt{tai117}, initial
+NEH included), whose mean moves between saved runs (1.8 and 3.2 for Geo(0.3), 39 and 69\,ms).
 
 \textbf{Adaptive $\beta$.} Geo-adapt gives the same quality as the plateau (mean gap 3.35 against
-3.27--3.32) without choosing $\beta$, but its cost is that of Geo(0.1)--Geo(0.2), not of a high $\beta$:
-11.3 constructions on \texttt{tai101} against 5.6--6.9 for Geo(0.5)--Geo(0.7), and 77\,ms against 53\,ms on
-\texttt{tai117}. The $\beta$ at which each run succeeded shows why: the median is 0.05 on
+3.27--3.32) without choosing $\beta$, but its cost is that of a low fixed $\beta$ (close to
+Geo(0.05)--Geo(0.1)), not of a high $\beta$:
+11.3 constructions on \texttt{tai101} against 5.6--6.9 for Geo(0.5)--Geo(0.7). The $\beta$ at which each run succeeded shows why: the median is 0.05 on
 \texttt{tai051} and \texttt{tai117}, where the first level is usually enough, but 0.175 on
 \texttt{tai101} (range 0.05--0.50), where the first attempts at low $\beta$ are wasted. Of the 139
-successful runs, 134 succeeded at $\beta\le0.35$; the maximum was 0.60 and the cap of 0.7 was never reached.
+successful runs, 134 succeeded at $\beta\le0.35$; the maximum was 0.60.
 The ramp is too slow for small instances: on \texttt{tai001} it reaches only $\beta=0.35$ within the 20
 attempts, and 37\,\% of the runs never beat NEH (63\,\% success against 87--97\,\% for
 Geo(0.3)--Geo(0.7)).
@@ -277,20 +282,19 @@ each other (0.07 on \texttt{tai101}, 0.30 on \texttt{tai081}), comparable to the
 between seeds (0.09--0.32). On
 \texttt{tai051} the first local search erases the head start of RandNEH: the mean gap after it is 3.94
 from NEH, 4.21 from Tri and 3.92 from Geo-adapt, although they started at 6.14, 5.73 and 5.81
-(Experiment B seeds). The 231--1\,489 mean iterations per run that follow (Table~\ref{tab:ils}), about
-5\,000 on \texttt{tai001}, then shape the result.
+(means over the Experiment B seeds). The 231--1489 mean iterations per run that follow (Table~\ref{tab:ils}), about
+5000 on \texttt{tai001}, then shape the result.
 
 \textbf{Where the start shows.} \texttt{tai081} is the only instance where randomised starts help
 repeatedly: all five end below NEH (2.40) by 0.09--0.30 points, Geo-adapt with the lowest mean (2.11,
 $p=0.017$) and the lowest spread between seeds (0.14). Here the local search does not level the starts
-but widens NEH's deficit, from 0.20--0.33 points before it to 0.36--0.57 after it (4.81 against
-4.24--4.45), and the final ranking follows. On \texttt{tai117} it is the opposite: NEH leaves the local
+but widens NEH's deficit, from 0.20--0.33 points before it to 0.35--0.57 after it (4.81 against
+4.24--4.45), and the final ranking broadly follows. On \texttt{tai117} it is the opposite: NEH leaves the local
 search among the best (0.94 against 0.91--1.07) and is the best start at the end (0.54 against
 0.57--0.64, $p=0.063$--$0.28$), with only about 250 iterations in 20\,s. Neither result is proof: with
-20 non-trivial uncorrected tests, none of the $p$-values survives a Bonferroni correction, and changing
-the set of 10 seeds moved the mean final gap of one configuration on \texttt{tai117} from 0.71 to 0.63.
+20 non-trivial uncorrected tests, none of the $p$-values survives a Bonferroni correction.
 If we take the best of the 10 seeds, which emulates 10 independent agents run in parallel, the Tri
-start reaches 0.00, 0.65, 1.72, 1.42 and 0.45 on the five instances. With a short budget and one instance per
+start reaches 0.00, 0.65, 1.72, 1.42 (1.43 when the budget ran out) and 0.45 on the five instances. With a short budget and one instance per
 size we do not compare these gaps with published averages.
 
 \section{Conclusions}
@@ -299,18 +303,22 @@ Biased randomisation turns the deterministic NEH into a loop of cheap constructi
 or below NEH: every distribution beat NEH on average in the five instances, by up to 0.73 gap points.
 With $\beta\ge0.1$ the geometric distribution keeps its bias as the number of remaining jobs grows,
 so on average it matches or improves on the triangular and uniform ones with fewer constructions; a high $\beta$
-keeps each construction close to NEH, which makes a fixed $\beta$ between 0.3 and 0.7 the cheapest
-choice (1.2--7.4 constructions per run for $n\ge50$). Our adaptive $\beta$ reaches the same quality
+keeps each construction close to NEH, which puts a fixed $\beta$ between 0.3 and 0.7 among the cheapest
+choices in constructions (1.2--7.4 per run for $n\ge50$). Our adaptive $\beta$ reaches the same quality
 without choosing $\beta$, but costs more than a high fixed $\beta$ and starts too slowly for $n=20$.
 Inside ILS-ESP the constructive gap barely matters: the six starts end within 0.3 points, and the
 clearest effect of the start is on \texttt{tai081}, where NEH's deficit widens in the first local
 search and all five randomised starts finish below it. A natural next step is a loop that
 does not stop at the first success, to measure whether the extra constructions pay for themselves.
 
-\paragraph{Code availability.} All results come from the notebook
-\texttt{src/PFSP\_RandNEH\_ILS\_ESP\_en.ipynb}. By default it
-reads the saved results in \texttt{results/}, so the tables can be reproduced without rerunning the
-experiments.
+\paragraph{Code availability.} The notebook \texttt{src/PFSP\_RandNEH\_ILS\_ESP.ipynb} produced the saved
+run behind the tables and all results of Experiments A and B; \texttt{src/PFSP\_RandNEH\_ILS\_ESP\_en.ipynb}
+is its English version, with identical code and a copy of its outputs. By default they read the saved
+results in \texttt{results/} instead of rerunning the experiments. The
+preliminary runs come from earlier versions: the single constructions from
+\texttt{results/v1\_una\_construccion/}, the other Geo(0.3) run from \texttt{results/v2\_antes\_geoadapt/}
+and the fixed-$\beta$ check from
+\texttt{results/chequeo\_beta\_alto.csv}, which no notebook in the repository writes.
 
 \begin{thebibliography}{9}
 \footnotesize\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}

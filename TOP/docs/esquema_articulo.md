@@ -12,7 +12,7 @@ Enunciado: `docs/homework.png` (diapositiva *Homework / Lab Activities*). No pid
 
 | Requisito del enunciado | Dónde se cubre |
 |---|---|
-| 1. *Construct your own Python program to implement the PJS heuristic for solving the TOP* | §3.1 (PJS), §4 (implementación). **Desviación:** el código es Rust, no Python; se explica en §4 y Python solo se usó como comprobación independiente (38 700 construcciones, 0 diferencias). Ver *Pendiente*. |
+| 1. *Construct your own Python program to implement the PJS heuristic for solving the TOP* | §3.1 (PJS), §4 (implementación). **Desviación:** el código es Rust, no Python; §4 lo dice y lo justifica. Los autores confirman que no es un problema (`preguntas_abiertas.md`, pregunta 1, 02-11-2026). |
 | 1. *... and test it in different instances* | §1 (387 instancias de Chao, 353 factibles), Tabla 1 (por conjunto), Tabla 2 (81 instancias de p1/p2) |
 | 2. *Complete a data analysis on the results for the different instances tested* | §5: ganancia por capa y por conjunto (Tabla 1), dependencia del tamaño (p4, p7), regla de α (§3.2 y §5), ejemplo p4.3.k (Figura 1), élite que no era la mejor (163 de 353) |
 | 3. *(Optional) Combine GRASP concepts with the PJS heuristic and analyze the results* | §3.3 (multiarranque, Algoritmo 1), §5 párrafos *Each layer adds reward* y *Many α vs. many iterations* |
@@ -33,12 +33,12 @@ Enunciado: `docs/homework.png` (diapositiva *Homework / Lab Activities*). No pid
 
 ## Mensajes clave
 
-1. PJS adapta los ahorros de Clarke y Wright al TOP con un ahorro enriquecido que pondera tiempo y recompensa con α; el paper no da α y su regla cualitativa no se cumple en Chao (r = +0.19), así que se prueba una rejilla de 21 α.
+1. PJS adapta los ahorros de Clarke y Wright al TOP con un ahorro enriquecido que pondera tiempo y recompensa con α; el paper no da α y su regla cualitativa no se cumple en Chao (r = +0.19 con la media de los α empatados, +0.43 con el menor), así que se prueba una rejilla de 21 α.
 2. Con origen y destino distintos el ahorro depende del sentido y puede ser negativo (12.8 % de los arcos de p4.3.k): se consideran los dos sentidos.
 3. Cada capa añade recompensa sobre las 353 instancias: PJS 157 868 → GRASP 170 469 (+7.98 %) → final 189 854 (+20.26 %); la ganancia crece con el tamaño (p4 +38.75 %, p7 +28.07 %).
 4. La búsqueda local necesita la diversidad de GRASP: solo sobre las deterministas se queda en 2.13 % en p1/p2; en 163 de 353 instancias la final sale de una élite que no era la mejor.
-5. Frente a Panadero: 2.04 % frente a 2.85 % de distancia media al BKS en los siete conjuntos; en p1/p2, 0.34 % (10 it) y 0.15 % (1 s) frente a 0.44 % con 128 hilos; nunca por encima del BKS.
-6. Repartir el presupuesto entre α rinde más que iterar con uno: 1.45 % con ~42 000 construcciones frente a 1.49 % con ~900 000.
+5. Frente a Panadero: 2.04 % de distancia media al BKS, o 2.17 % con el denominador del paper, frente a 2.85 % y mejor en los siete conjuntos; en p1/p2, 0.34 % (10 it) y 0.15 % (1 s) frente a 0.44 % con 128 hilos; nunca por encima del BKS.
+6. Repartir el presupuesto entre α rinde más que iterar con uno: 1.45 % con 42 000 construcciones frente a 1.49 % con ~880 000 (sin la trivial p2.4.a): unas 20 veces menos construcciones y una quinta parte del tiempo de hilo.
 7. Salvedades: una ejecución nuestra de 1 s rinde menos que un hilo de Panadero (2.33–2.45 % frente a 1.73 %); las variantes de 1 s no son reproducibles; el cómputo no es igual.
 
 ## Cifras y fuentes
@@ -70,22 +70,24 @@ Enunciado: `docs/homework.png` (diapositiva *Homework / Lab Activities*). No pid
 | Recompensa total: PJS mejor α / GRASP / det.+LS / final | 157 868 / 170 469 (+7.98 %) / 181 103 (+14.72 %) / 189 854 (+20.26 %) | `informe_busqueda_local.md`, *Resultados globales* |
 | Mejor α común y su recompensa | 0.40, 150 585 (−4.61 %), óptimo en 170 | `informe_alpha.md`, *Resultados globales* |
 | α influye en | 285 de 353 | `informe_alpha.md` |
-| Correlación CV–α óptimo | +0.19 (285 inst.) | cálculo propio `tmp/cv_alpha2.sh` (α = media de los empatados, CV por conjunto) sobre `results/alpha_grid.csv` y los ficheros de instancia; da 0.193, igual que la diapositiva 4 |
+| Correlación CV–α óptimo | +0.19 (media de los empatados), +0.43 (menor α óptimo, columna `best_alpha`); 285 inst. | `tmp/cv_alpha2.sh` y `tmp/r4_check.py` sobre `results/alpha_grid.csv` y los ficheros de instancia: 0.1929 y 0.4255. El primero coincide con la diapositiva 4 |
 | CV de las recompensas p4 / p5 | 0.64 / 0.35 | `tmp/cv.txt` (mismo script) |
-| α = 0 en p4: % de la mejor | 68 % (media por instancia, 54 inst. no triviales) | `tmp/cv_alpha2.sh`: 0.6796 |
+| α = 0 en p4: % de la mejor | 68 % (media por instancia, sobre las 54 en que α influye; 69.1 % sobre las 56 factibles) | `tmp/cv_alpha2.sh`, `tmp/r4_check.py`: 0.6796 y 0.6910 |
 | LS mejora élite / ganancia media / insertados | 93.6 % / +18.16 % / 7.48 | `informe_busqueda_local.md`, *Efecto de la búsqueda local* |
 | Instancias en que aplicar la LS solo a la mejor previa habría dado menos | 163 de 353 (8 187 de recompensa) | `informe_busqueda_local.md`, *De dónde sale* (la lectura «la élite final no era la mejor» daría 244, según el revisor) |
 | Ganancia final vs determinista por conjunto | p1 +8.70, p2 +2.09, p3 +8.40, p4 +38.75, p5 +13.61, p6 +17.44, p7 +28.07 % | `informe_busqueda_local.md`, *Por conjunto* |
 | Gaps por conjunto (det., sin LS, final, P-128) y BKS alcanzado | ver Tabla 1 | `results/bks_by_set.csv` (redondeado a 2 decimales) |
 | Total BKS / final | 195 931 / 189 854 | `bks_by_set.csv`, fila `all` |
+| Denominador del *Gap* de Panadero | Su recompensa (OBS con 128 hilos): cuadra en 81 de 81 filas; dividir por el BKS, solo en 69 | `tmp/r4_check.py` sobre `data/panadero2021_p1_p2.csv` (`bks`, `thr128`, `gap_pct`); medias p1 0.69 y p2 0.11, las de su figura 4 |
+| Final con el denominador del paper | p1 0.60, p2 0.00, p3 0.70, p4 6.38, p5 1.35, p6 1.22, p7 3.61; total 2.17 (Tabla 1 y §4, §5, abstract) | `tmp/vc_gapobs.py` y `tmp/r4_check.py` sobre `results/best_solution.csv` (`best_ls`) y `data/bks_chao.csv` |
 | p1/p2: BKS total 10 685; Panadero 1 hilo 1.73 % (52 BKS), 128 hilos 0.44 % (69) | — | `metodos_y_comparacion_panadero.md` §0 (de Panadero tablas 3–4) |
 | p1/p2 nuestras variantes (gap, BKS, vs P-128) | det 4.82/44/0-45-36; 10 it 1.99/53/1-56-24; 1 s rejilla 0.71/65/4-67-10; 10 it+LS 0.34/73/10-65-6; 100 it+LS 0.29/74/12-62-7; 1 s+LS 0.15/77/12-65-4; det+LS 2.13 | `metodos_y_comparacion_panadero.md` §4 |
 | Una ejecución de 1 s (media de 10, mejor α) | geom. 2.45 %, softmax 2.33 % | `docs/comparacion_panadero.md` l. 31–32 (informe generado; la síntesis daba 2.43/2.29, desfasada) |
-| 1 s mejor α vs 100 it rejilla | 1.49 % (956 937 constr./instancia, ~960 000) vs 1.45 % (42 000); cociente ~23 | `panadero_1s_runs.csv` (suma de `iterations` / 81, cálculo propio); `metodos_y_comparacion_panadero.md` §2 |
+| 1 s mejor α vs 100 it rejilla | 1.49 % (~880 000 constr./instancia: 876 008 sin p2.4.a, que suma 7 431 281; 956 937 con ella) vs 1.45 % (42 000); cociente 20.9 ("about 20 times" en el artículo) | `tmp/r4_check.py` y `tmp/vc_work.py` sobre `results/panadero_1s_runs.csv` y `results/panadero_100it_grid_runs.csv`, columna `iterations` |
+| Tiempo de hilo por instancia, 1 s mejor α vs 100 it rejilla | 20.00 s vs 4.09 s (cociente 4.9, "a fifth"); 20 ejecuciones de 1 s por instancia (1620 filas / 81) | mismos scripts, suma de `seconds` / 81 |
 | Iteraciones de 1 s | ~40 600 p1, ~56 200 p2 (rejilla) | `scratchpad.md` §7 |
 | Tiempo 1 s rejilla | 2 836 s (47 min) | `metodos_y_comparacion_panadero.md` §2 |
 | p4.3.k det. / final / BKS | 614 (32 cl., α = 0.40) / 874 (54 cl., +42.3 %, geom. α = 0.45 run 7, 625 antes, 19 insertados) / 919 (61 cl.) | `recheck_p4.3.k.md` §3; subtítulos de las figuras |
-| Comprobación Python | 38 700 construcciones, 0 discrepancias | `scratchpad.md` §7 (Verificaciones) |
 | verify_routes | 387 inst., 1000 rutas, 9679 clientes, todo factible | `scratchpad.md` §7 |
 | Panadero: Java SE 8, Xeon E5-2650 v4 16 núcleos, 1 s por hilo | — | Panadero §6.2 |
 | Cómputo por instancia de la rejilla | < 4 hilo·s (127 × 12 / 387 = 3.9) | cálculo propio |
@@ -93,7 +95,7 @@ Enunciado: `docs/homework.png` (diapositiva *Homework / Lab Activities*). No pid
 
 ## Figuras y tablas
 
-- **Tabla 1** (`tab:results`): una fila por conjunto + fila *All*. Columnas: nodos, instancias factibles, gap determinista, gap sin LS, gap final, gap Panadero 128 (figura 4), BKS alcanzados, ganancia final vs determinista. Fuente: `results/bks_by_set.csv` + `informe_busqueda_local.md`.
+- **Tabla 1** (`tab:results`): una fila por conjunto + fila *All*. Columnas: nodos, instancias factibles, gap determinista, gap sin LS, gap final, gap Panadero 128 (figura 4), BKS alcanzados, ganancia final vs determinista; la leyenda da además la final con el denominador del paper. Fuente: `results/bks_by_set.csv` + `informe_busqueda_local.md` + `tmp/r4_check.py`.
 - **Tabla 2** (`tab:p1p2`): 81 instancias de p1/p2; método, gap medio, BKS alcanzados, mejor/igual/peor frente a P-128. Fuente: `metodos_y_comparacion_panadero.md` §4.
 - **Figura 1** (`fig:p4`): `results/figures/routes/p4.3.k.png` y `results/figures/routes_ls/p4.3.k.png`, lado a lado.
 
@@ -107,7 +109,7 @@ Enunciado: `docs/homework.png` (diapositiva *Homework / Lab Activities*). No pid
 
 ## Pendiente
 
-1. **Python frente a Rust:** el enunciado pide «your own Python program»; el código es Rust. El artículo lo dice y lo justifica. Confirmar que el profesor lo acepta.
+1. ~~**Python frente a Rust**~~ (resuelto el 02-11-2026, `preguntas_abiertas.md`, pregunta 1): el artículo sigue diciendo que el enunciado pide Python y que el código es Rust; la frase de la comprobación en Python se ha quitado porque no hay código ni salida en el repositorio.
 2. **Referencia de Chao:** Panadero cita como fuente del benchmark «A fast and effective heuristic for the orienteering problem» (EJOR 88:475–489), que es el artículo del OP; el del TOP (*The team orienteering problem*) no está en ningún PDF de `docs/`. Se cita como lo da Panadero; decidir si se cambia.
 3. **Tiempo de la rejilla:** 127 s en `informe_alpha.md` (tareas de construcción), ~140 s en la presentación y `comparacion_bks_conjuntos.md`, ~2 min 10 s en total según el scratchpad. El artículo usa 127 s + 0.4 s.
 4. **Élite:** el scratchpad dice 125 490 / 18 791; el informe generado, 110 496 / 18 757. Se usa el informe.
@@ -116,5 +118,7 @@ Enunciado: `docs/homework.png` (diapositiva *Homework / Lab Activities*). No pid
 7. No hay transparencias del curso sobre el TOP en `docs/` (solo `homework.png`), así que no se citan.
 8. Falta `TOP/README.md` (pendiente del proyecto, no del artículo).
 9. **BKS de Panadero en p3–p7 (ronda 2):** sus gaps se miden frente al BKS de Ke et al. (§6.2); solo hemos comprobado que coincide con el de PSOiA en p1–p2. Salvedad añadida en §1 y en la leyenda de la Tabla 1.
-10. **Prosa:** 2 053 palabras tras la ronda 2, por encima del rango orientativo (1 700–1 950); el PDF tiene 3 páginas. La figura queda en 2 × 0.41\textwidth para que quepa.
-11. Las reglas de α «basadas en el CV o en rasgos» solo las respalda `metodos_y_comparacion_panadero.md` §1 y `scratchpad.md` §5 (sin CSV); el artículo las presenta como «in our trials».
+10. **Prosa (ronda 4):** 2 015 palabras con el comando de la guía §11 (1 968 en la ronda 3, aprobada) y 1 923 con `tmp/r3_count.py`, que no cuenta fórmulas ni comandos (1 870 en la ronda 3); abstract, 135 y 133. El PDF tiene 3 páginas. La figura sigue en 2 × 0.45\textwidth.
+11. Las reglas de α «basadas en el CV o en rasgos» solo las respalda `metodos_y_comparacion_panadero.md` §1 y `scratchpad.md` §5 (sin CSV); el artículo las presenta como «in preliminary trials, not part of the published code» (decisión de los autores).
+12. **Denominador de la figura 4 de Panadero:** solo se puede comprobar en p1 y p2 (las medias de su columna *Gap* coinciden con la figura). En p3–p7 el paper no da datos por instancia y se supone el mismo denominador; la leyenda de la Tabla 1 lo presenta «as in its Tables 3–4».
+13. **Presentación:** `guion_presentacion.md` (l. 185) y la diapositiva 8 siguen citando las 38 700 ejecuciones en Python, y `guion_presentacion.md` (l. 292) y `metodos_y_comparacion_panadero.md` (l. 118, l. 156) dan ~900 000 construcciones, frente a las ~880 000 del artículo. No se han tocado.

@@ -5,7 +5,7 @@ Contestad debajo de cada una (en **Respuesta**) y el bucle escritor–revisor la
 
 ## 1. Enunciado y entrega del código
 
-No hay enunciado en `GRASP/` ni README. El artículo tiene un párrafo *Code availability* que remite
+No hay enunciado en `GRASP/`. El artículo tiene un párrafo *Code availability* que remite
 al notebook, como en POP. ¿Hay enunciado? ¿Hay que incluir el código como apéndice?
 
 **Respuesta:**
@@ -29,7 +29,7 @@ solo que los tiempos son medias de 20 ejecuciones en una misma máquina. ¿Qué 
 ## 4. Discrepancia con la presentación: tiempos de Zipf y softmax
 
 La presentación dice «≈1.7 veces más lentos», pero eso solo se cumple en a280. En las 7 instancias el
-cociente va de 1.26 a 1.75 (media 1.47), y el artículo da ese rango. ¿De acuerdo?
+cociente va de 1.26 a 1.75 (media 1.47), y el artículo da «about 1.3–1.75». ¿De acuerdo?
 
 **Respuesta:**
 
@@ -61,5 +61,5 @@ según la propuesta del revisor (ver `ignore/paper_loop/revision_r1.md`). ¿Est�
 
 ---
 
-**Estado del bucle:** APROBADO en la ronda 2 (0 B, 0 I, 7 menores en `ignore/paper_loop/revision_r2.md`).
+**Estado del bucle:** APROBADO en la ronda 4 (0 B, 0 I, 8 menores en `ignore/paper_loop/revision_r4.md`).
 Cuando respondáis a estas preguntas, relanzad `/paper-loop GRASP 1` para incorporarlas.

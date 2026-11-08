@@ -15,7 +15,7 @@ párrafo *Code availability* que nombra el notebook.
 
 No existe `results/figures/`. Las figuras guardadas en los notebooks tienen ejes y títulos en
 español (también la versión `_en`), y las gráficas de la presentación son nativas de PowerPoint.
-Por eso el artículo lleva dos tablas y ninguna figura, y la prosa queda en 2 195 palabras (guía:
+Por eso el artículo lleva dos tablas y ninguna figura, y la prosa queda en 2 369 palabras (guía:
 1 700–1 950). ¿Regeneráis una figura en inglés ejecutando el notebook, o seguimos sin figura?
 
 **Respuesta:**
@@ -38,7 +38,8 @@ con sus medias. ¿Qué significa «ESP» en el notebook, para poder expandirlo?
 El artículo dice solo «two worker processes of a shared machine». ¿Qué máquina (CPU, RAM) y cuántos
 procesos se usaron?
 
-**Respuesta:**
+**Respuesta:** La máquina no era compartida: se quita «shared» del artículo (02-11-2026). CPU y RAM
+siguen sin constar.
 
 ## 5. Discrepancias entre presentación y CSV
 
@@ -66,9 +67,17 @@ matizamos la frase?
 
 **Respuesta:**
 
+## 8. Origen de `results/chequeo_beta_alto.csv` (verificación, I1)
+
+Ningún notebook del repo genera ese CSV; hay una copia idéntica en `results/v2_antes_geoadapt/`. El
+artículo dice que no lo genera ningún notebook y lo atribuye a «earlier versions», pero eso es una
+inferencia. ¿De dónde salió?
+
+**Respuesta:**
+
 ---
 
-**Estado del bucle:** APROBADO en la ronda 3 (0 B, 0 I, 3 menores opcionales en
-`ignore/paper_loop/revision_r3.md`). Lo que más se nota frente a VRP es la falta de comparación con
+**Estado del bucle:** APROBADO en la ronda 5 (0 B, 0 I, 5 menores opcionales en
+`ignore/paper_loop/revision_r5.md`). Lo que más se nota frente a VRP es la falta de comparación con
 las cifras publicadas por Juan et al. (pregunta 3). Si añadís una figura (pregunta 2), habrá que
-recortar unas 300 palabras. Cuando respondáis, relanzad `/paper-loop PFSP 1`.
+recortar unas 400 palabras. Cuando respondáis, relanzad `/paper-loop PFSP 1`.

@@ -51,9 +51,9 @@ The Team Orienteering Problem (TOP) asks for at most $m$ time-limited routes tha
 total reward from optional customers. We implement in Rust the savings heuristic of Panadero et al.\
 (PJS), turn it into a biased-randomised multi-start (GRASP), add a 2-opt and insertion local search on
 elite solutions, and test the three layers on the 353 feasible instances of Chao et al.\ (about 2\,min
-on a laptop for the main experiment). Over PJS with its best $\alpha$, GRASP adds $7.98\,\%$ to the total reward and
+on a laptop). Over PJS with its best $\alpha$, GRASP adds $7.98\,\%$ to the total reward and
 the local search brings the gain to $20.26\,\%$. The mean gap to the best-known solutions is
-$2.04\,\%$, below the $2.85\,\%$ of Panadero et al.\ with 128 threads and lower in all seven sets.
+$2.04\,\%$, or $2.17\,\%$ as Panadero et al.\ measure it, below their $2.85\,\%$ with 128 threads and lower in all seven sets.
 Trying 21 values of $\alpha$ pays more than iterating longer with one.
 \end{abstract}
 
@@ -72,9 +72,9 @@ The test data are the classical instances of Chao et al.~\cite{chao1996}: 387 fi
 \texttt{p1}--\texttt{p7}, with 21 to 102 nodes and $m$ between 2 and 4. An instance named
 \texttt{p4.3.k} belongs to set 4 (100 nodes: origin, destination and 98 customers), has $m=3$ vehicles,
 and the letter \texttt{k} codes the time limit, here $t_{\max}=50$. Within a set the nodes and rewards
-are identical; only $m$ and $t_{\max}$ change. In 34 instances no customer fits within $t_{\max}$ even alone, so we report on the remaining 353
+are identical; only $m$ and $t_{\max}$ change. In 34 instances no customer fits within $t_{\max}$, so we report on the remaining 353
 (the paper speaks of 354). Best-known solutions (BKS) are the column \emph{BEST} of the published results
-of PSOiA~\cite{dang2013}; Panadero et al.\ use those of Ke et al.\ quoted in~\cite{panadero2021}, which we could check only on the 81
+of PSOiA~\cite{dang2013}; Panadero et al.\ use those of Ke et al.\ quoted in~\cite{panadero2021}, checkable only on the 81
 instances of Tables~3--4 of~\cite{panadero2021} (\texttt{p1}--\texttt{p2}), where they coincide with ours.
 
 \section{Problem formulation and enriched savings}
@@ -91,7 +91,7 @@ R_r\subseteq N',\quad R_r\cap R_s=\emptyset\ (r\neq s),\qquad p\le m,\qquad
 t(R_r)\le t_{\max}\quad (r=1,\dots,p).
 \label{eq:model}
 \end{equation}
-Read literally: at most $m$ routes, no customer served twice, every route within the time limit, and
+Read literally: at most $m$ routes, no customer served twice, every route within $t_{\max}$, and
 customers left out cost nothing.
 
 Joining a route that ends at $i$ with a route that starts at $j$ replaces the legs $i\to n+1$ and $0\to
@@ -120,7 +120,7 @@ $\alpha\in(0,1)$; our grid includes both ends). Both terms have the same order o
 Following Section~4 of~\cite{panadero2021}:
 \begin{enumerate}
 \item \textbf{Dummy solution.} One route $0\to i\to n+1$ per customer. A customer whose dummy route
-exceeds $t_{\max}$ can never be served and is discarded.
+exceeds $t_{\max}$ is discarded.
 \item \textbf{Savings list.} The enriched savings~\eqref{eq:savings} of all ordered pairs are sorted in
 decreasing order.
 \item \textbf{Merging.} Walking down the list, the arc $(i,j)$ merges the route that ends at $i$ with the
@@ -130,9 +130,10 @@ route that starts at $j$ if the result fits in $t_{\max}$; the arc is then delet
 The paper gives no value of $\alpha$, only the rule that it should be close to 0 with heterogeneous
 rewards and close to 1 with homogeneous ones~\cite{panadero2021}. The rule does not hold here. Rewards are fixed per set, so there are
 only seven values of their coefficient of variation (CV), and over the 285 instances in which $\alpha$
-matters the correlation between CV and the best $\alpha$ (the mean of tied optima) is $+0.19$, weak and
-with the wrong sign; in \texttt{p4}, the most heterogeneous set (CV $0.64$), $\alpha=0$ reaches on
-average only $68\,\%$ of the best reward. In our trials, rules based on the CV or on instance features
+matters the correlation between CV and the best $\alpha$ (the mean of tied optima) is $+0.19$ ($+0.43$ with the
+smallest optimum), with the wrong sign either way; in \texttt{p4}, the most heterogeneous set
+(CV $0.64$), $\alpha=0$ reaches on average only $68\,\%$ of the best reward over its 54 such instances. In
+preliminary trials, not part of the published code, rules based on the CV or on instance features
 did not beat a fixed $\alpha$, because the reward jumps irregularly with $\alpha$: a small change reorders the savings list and the greedy merging
 builds different routes. We therefore run the 21 values $\alpha=0,0.05,\dots,1$ and keep the best.
 
@@ -144,7 +145,7 @@ series and keeps the best, as one thread of Algorithm~1 of~\cite{panadero2021} o
 Algorithm~1 of~\cite{li2022}. We test two biased rules:
 \begin{itemize}
 \item \textbf{Geometric} (the paper's): take the $k$-th remaining arc, $k\sim\mathrm{Geom}(\beta)$ with
-$\beta=0.3$~\cite{panadero2021}. Only the position in the list matters.
+$\beta=0.3$~\cite{panadero2021}. Only the position matters.
 \item \textbf{Softmax} (our proposal): take each remaining arc with probability proportional to
 $\exp(s'_{ij}/\tau)$, $\tau=1$. Arcs with similar savings get similar probabilities.
 \end{itemize}
@@ -162,28 +163,28 @@ reward, so no acceptance criterion is needed; the time freed by 2-opt feeds the 
 \section{Implementation}
 \label{sec:impl}
 
-The assignment asks for a Python program; we wrote the production code in Rust (rustc 1.99, crate
+The assignment asks for a Python program; we wrote the code in Rust (rustc 1.99, crate
 \texttt{pjs} in \texttt{src/rust}) because the experiment consists of 170\,667 independent tasks, which
-the library \texttt{rayon} spreads over all threads. Python served only as an independent check (see
-\emph{Validation}). The main modules are \texttt{heuristic.rs} (PJS), \texttt{grasp.rs},
+the library \texttt{rayon} spreads over all threads. The main modules are \texttt{heuristic.rs} (PJS), \texttt{grasp.rs},
 \texttt{elite.rs} and \texttt{local\_search.rs}. The savings list is sorted with a \emph{stable} sort,
 so tied arcs keep their generation order; ties in the selection step favour the shorter route; and
-$t_{\max}$ is checked with a tolerance of $10^{-9}$.
+$t_{\max}$ has a tolerance of $10^{-9}$.
 
 \textbf{Protocol.} For every instance and every $\alpha$: one deterministic construction and 10 runs of
 10 iterations with each rule, i.e.\ 21 tasks per $\alpha$ (441 per instance) and 4200 random
 constructions per instance. Each run's seed
 derives from the base seed 1, the instance, $\alpha$, the rule and the run number, so results are
 reproducible bit for bit. On the 81 instances of
-Tables~3--4 of~\cite{panadero2021} we also ran 100 iterations and 1\,s of wall-clock time per run (the
-paper's budget; not exactly reproducible). The quality measure is the paper's:
-$\text{gap}=100\,(\text{BKS}-\text{reward})/\text{BKS}$, averaged over instances. All runs use 12
+Tables~3--4 of~\cite{panadero2021} we also ran, over the 21 $\alpha$, 100 iterations and 1\,s of wall-clock time per run (the
+paper's budget; not exactly reproducible), and 20 runs of 1\,s with the best deterministic $\alpha$ only.
+The quality measure is $\text{gap}=100\,(\text{BKS}-\text{reward})/\text{BKS}$, averaged over instances; the
+paper divides by its own reward instead, which gives slightly larger gaps (our final solutions: $2.17\,\%$
+instead of $2.04\,\%$). All runs use 12
 threads on an AMD Ryzen 5 5500U laptop (6 cores) under Windows 11; Panadero et al.\ use Java on a 16-core
-Xeon with 1 to 128 threads.
+Xeon (1--128 threads).
 
-\textbf{Validation.} Every solution passes a feasibility check; a separate binary that shares no code
-with \texttt{pjs} re-verifies the 1000 final routes; and an independent Python implementation
-reproduced 38\,700 deterministic constructions exactly.
+\textbf{Validation.} All solutions pass a feasibility check; a separate binary sharing no code re-verifies
+the 1000 final routes.
 
 \section{Computational results}
 \label{sec:res}
@@ -194,9 +195,10 @@ Table~\ref{tab:results} gives the mean gap per set and Table~\ref{tab:p1p2} the 
 \begin{table}[!t]
 \centering
 \caption{Mean gap to the BKS~\cite{dang2013} per set. \emph{PJS}: best of the 21 $\alpha$;
-\emph{GRASP}: best solution without local search; \emph{Final}: elite + local search (10 iterations per
-run); \emph{Panadero 128}: Figure~4 of~\cite{panadero2021} (relative to the BKS of Ke et al.), overall
-mean weighted by our feasible instances per set. \emph{Gain}: total reward of Final over PJS.}
+\emph{GRASP}: best without local search; \emph{Final}: elite + local search (10 iterations);
+\emph{Panadero 128}: Figure~4 of~\cite{panadero2021} (BKS of Ke et al., dividing by its own
+reward as in its Tables~3--4), \emph{All} weighted by feasible instances; with that denominator
+\emph{Final} is 0.60, 0.00, 0.70, 6.38, 1.35, 1.22, 3.61 (\emph{All} 2.17). \emph{Gain}: total reward of Final over PJS.}
 \label{tab:results}
 \scriptsize
 \setlength{\tabcolsep}{4pt}
@@ -220,8 +222,8 @@ Set & Nodes & instances & gap (\%) & gap (\%) & gap (\%) & gap (\%) & (Final) & 
 
 \begin{table}[!t]
 \centering
-\caption{The 81 instances of \texttt{p1}--\texttt{p2}, BKS from Tables~3--4 of~\cite{panadero2021}.
-\emph{vs.\ P-128}: instances better / equal / worse than Panadero et al.\ with 128 threads; in bold, our
+\caption{The 81 instances of \texttt{p1}--\texttt{p2}, BKS from Tables~3--4 of~\cite{panadero2021}; all gaps,
+those of Panadero et al.\ included, divide by the BKS. \emph{vs.\ P-128}: instances better / equal / worse than Panadero et al.\ with 128 threads; in bold, our
 best variant.}
 \label{tab:p1p2}
 \scriptsize
@@ -246,8 +248,8 @@ GRASP, 100 iterations, 21 $\alpha$ + local search & 0.29 & 74 & 12 / 62 / 7 \\
 \graphicspath{{../results/figures/}}
 \includegraphics[width=0.45\textwidth,bb=0 0 1400 1000,trim=0 0 340 0,clip]{routes/p4.3.k.png}\hfill
 \includegraphics[width=0.45\textwidth,bb=0 0 1400 1000,trim=0 0 340 0,clip]{routes_ls/p4.3.k.png}
-\caption{\texttt{p4.3.k} ($m=3$, $t_{\max}=50$; square: origin, diamond: destination; marker area
-proportional to reward; grey: not visited). Left: PJS with its best $\alpha=0.40$, reward 614 with 32
+\caption{\texttt{p4.3.k} ($m=3$, $t_{\max}=50$; square: origin, diamond: destination; marker size
+grows with reward; grey: not visited). Left: PJS with its best $\alpha=0.40$, reward 614 with 32
 customers. Right: final solution, reward 874 with 54 customers, from a geometric run with $\alpha=0.45$
 worth 625 before the local search, which inserted 19 customers.}
 \label{fig:p4}
@@ -267,7 +269,7 @@ local search on the deterministic elite alone stops at $2.13\,\%$, against $0.34
 elite.
 
 \textbf{Comparison with Panadero et al.} With 10 iterations per run, the final gap is below that of
-Panadero et al.\ with 128 threads in all seven sets ($2.04\,\%$ vs.\ $2.85\,\%$), most clearly in
+Panadero et al.\ with 128 threads in all seven sets ($2.17\,\%$ vs.\ $2.85\,\%$ with the paper's denominator), most clearly in
 \texttt{p4} and \texttt{p7}. On \texttt{p1}--\texttt{p2} (Table~\ref{tab:p1p2}) it reaches $0.34\,\%$ against
 $0.44\,\%$, and $0.15\,\%$ with 1\,s per run (BKS in 77 of 81 instances, worse than the paper in 4). Without the local search no variant reaches the paper's 128 threads, and one of our 1\,s runs gives on
 average $2.45\,\%$ (geometric) or $2.33\,\%$ (softmax), worse than the $1.73\,\%$ of one of its threads.
@@ -275,9 +277,10 @@ The difference probably lies in what the paper leaves open (tie order, $\alpha$,
 edge) and in our runs sharing 6 cores (fewer iterations per run).
 
 \textbf{Many $\alpha$ vs.\ many iterations.} On \texttt{p1}--\texttt{p2}, 1\,s runs with the best
-$\alpha$ (about 960\,000 constructions per instance) give a gap of $1.49\,\%$, and 100-iteration runs
-over the 21 $\alpha$ (42\,000 constructions) give $1.45\,\%$: the same quality with some 23 times less
-work. Spreading the budget over $\alpha$ explores more.
+$\alpha$ (on average about 880\,000 constructions per instance, leaving out the trivial \texttt{p2.4.a}) give a
+gap of $1.49\,\%$, and 100-iteration runs over the 21 $\alpha$ (42\,000 constructions) give $1.45\,\%$: the same
+quality with about 20 times fewer constructions and a fifth of the thread time (4\,s against 20\,s per
+instance). Spreading the budget over $\alpha$ explores more.
 
 \textbf{Time.} The grid takes 127\,s on 12 threads for the 387 instances, under 4\,s of thread time per
 instance against 128\,s for Panadero et al.\ with 128 threads (different machines and languages, so
@@ -294,9 +297,13 @@ seven sets. The large sets \texttt{p4} and \texttt{p7} gain most but remain the 
 and $3.42\,\%$). The next step is a richer neighbourhood (moves between routes, swaps)
 inside an iterated local search: diversity first, then repair.
 
-\paragraph{Code availability.} After \texttt{cargo build --release} in \texttt{src/rust}, the grid and the local search are reproduced by
-\texttt{pjs grid data/top-data results} ($\approx2$\,min), and the comparisons of
-Tables~\ref{tab:results}--\ref{tab:p1p2} by \texttt{pjs bks} and \texttt{pjs panadero}.
+\begin{sloppypar}
+\paragraph{Code availability.} \texttt{cargo build -{}-release} in \texttt{src/rust} puts the executable in
+\texttt{ignore/target/release}. From \texttt{TOP/}, \texttt{pjs grid data/top-data results} with
+\texttt{-{}-png-dir results/figures/routes} and \texttt{-{}-ls-png-dir results/figures/routes\_ls}
+reproduces the grid, the local search and Figure~\ref{fig:p4} ($\approx2$\,min); \texttt{pjs bks} and three runs of
+\texttt{pjs panadero} (see \texttt{docs/scratchpad.md}) write the CSV files behind Tables~\ref{tab:results}--\ref{tab:p1p2}.
+\end{sloppypar}
 
 \begin{thebibliography}{9}
 \footnotesize\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
