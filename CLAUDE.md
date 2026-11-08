@@ -19,10 +19,11 @@ proyectos; lo de un solo proyecto va en su `docs/` (p. ej. `TOP/docs/scratchpad.
 | `TOP/` | Team Orienteering, heurística PJS + GRASP + búsqueda local, en Rust (387 instancias de Chao) | Código, artículo y presentación terminados |
 | `GRASP/` | GRASP con ahorros y aleatorización sesgada para el TSP (10 instancias TSPLIB) | Código, artículo y presentación terminados |
 | `PFSP/` | Permutation Flow-Shop, NEH / RandNEH / ILS-ESP con β adaptativo (5 instancias de Taillard) | Código, artículo y presentación terminados; faltan las instancias en `data/` |
+| `simTOP/` | TOP con tiempos de viaje estocásticos: simheurística (PJS + BR + búsqueda local + simulación Monte Carlo) del paper de Juan et al. (2019), 141 instancias de p1–p3 (Numba) | Código y resultados terminados; falta artículo |
 
 ## Estructura obligatoria de cada subproyecto
 
-Todo subproyecto con código (`POP/`, `TSP/`, `VRP/`, `TOP/`, `GRASP/`, `PFSP/` y los que se
+Todo subproyecto con código (`POP/`, `TSP/`, `VRP/`, `TOP/`, `GRASP/`, `PFSP/`, `simTOP/` y los que se
 añadan) tiene estas carpetas:
 
 - `src/` — código: notebooks y módulos `.py`. Nada más, salvo dos excepciones:
@@ -67,7 +68,7 @@ en `DTOP/` salvo que se pida expresamente.
 - Ejecutar un notebook sin interfaz (desde la carpeta del subproyecto):
   `uv run --with nbconvert jupyter nbconvert --to notebook --execute --inplace src/<nb>.ipynb`
 - Windows: si uv falla al enlazar ficheros, usa `UV_LINK_MODE=copy`.
-- Algunos experimentos tardan (POP ~6 min, TSP ~75 s, GRASP ~22 min, PFSP con
+- Algunos experimentos tardan (POP ~6 min, TSP ~75 s, GRASP ~22 min, simTOP ~25 s, PFSP con
   `PFSP_RERUN=1` mucho más, rejilla de TOP ~2 min): no los relances sin necesidad.
 
 ## Git
@@ -77,7 +78,8 @@ en `DTOP/` salvo que se pida expresamente.
 - No se sube: `ignore/`, `.venv/`, cachés de Python y herramientas, auxiliares de LaTeX.
 - No añadas reglas al `.gitignore` que excluyan PDFs de `docs/`.
 - Git está en Windows con `core.ignorecase=true`: los nombres de carpeta van en mayúsculas
-  (`POP`, `TSP`, `VRP`, `DTOP`, `TOP`, `GRASP`, `PFSP`); para cambiar solo mayúsculas/minúsculas hay que pasar por
+  (`POP`, `TSP`, `VRP`, `DTOP`, `TOP`, `GRASP`, `PFSP`), salvo las prácticas de simulación, que empiezan por `sim` en minúsculas
+  seguido del problema en mayúsculas (`simTOP`); para cambiar solo mayúsculas/minúsculas hay que pasar por
   un nombre intermedio o por `git rm --cached`.
 - Solo haz commit o push cuando se pida.
 
@@ -101,9 +103,21 @@ en `DTOP/` salvo que se pida expresamente.
 
 ## Orquestador y agentes de código
 
+- `lector-papers` (Opus, esfuerzo high) lee los PDFs de `<CARPETA>/docs/`, conversa con el usuario y
+  escribe `<CARPETA>/docs/explicacion_paper.md`: explicación sencilla del paper y especificación para
+  implementarlo. Como necesita hablar con el usuario, se abre en sesión propia:
+  `claude --agent lector-papers`, o con `/leer-paper <CARPETA>` en la sesión actual. La skill
+  (`.claude/skills/leer-paper/SKILL.md`) añade el proceso iterativo y las herramientas (PDFs, internet,
+  código del repositorio) que se usaron con `simTOP/`. No escribe código.
 - `/orquestar <CARPETA> <objetivo>` (o `claude --agent orquestador`) planifica el trabajo y lo
   reparte entre `code-writer`/`code-reviewer` (bucle de código), `paper-writer`/`paper-reviewer`
   (bucle de `/paper-loop`) y `Explore`. El orquestador no escribe código ni artículos.
-- Orden habitual: código → `results/` → README → artículo.
+- `code-writer` corre en Sonnet y, si existe `explicacion_paper.md`, lo sigue como especificación
+  (`code-reviewer` lo usa como referencia de fidelidad).
+- `revisor-final` (Opus, esfuerzo xhigh) revisa al cerrar una práctica todo el conjunto: paper
+  original, especificación, código, resultados, README, artículo y presentación. No edita nada.
+  Informe en `<CARPETA>/ignore/revision_final/informe.md`.
+- Orden habitual: (`explicacion_paper.md` →) código → `results/` → README → artículo → presentación
+  → `revisor-final`.
 - Plan en `<CARPETA>/ignore/orquestador/plan.md`; informes de código en
   `<CARPETA>/ignore/code_loop/<tarea>/`. No se suben.

@@ -2,7 +2,7 @@
 name: code-writer
 description: Programador de los subproyectos del máster (Python con uv y notebooks; Rust en TOP; C++ con Zig en VRP). Implementa o corrige código, ejecuta experimentos y regenera results/ siguiendo CLAUDE.md, o corrige según la revisión de code-reviewer. Se usa desde el orquestador (/orquestar) o cuando se pide escribir, arreglar o ampliar el código de una práctica.
 tools: Read, Grep, Glob, Write, Edit, NotebookEdit, Bash
-model: inherit
+model: sonnet
 color: green
 ---
 
@@ -14,8 +14,9 @@ El prompt te da: la carpeta del subproyecto `<P>`, el directorio del bucle `<D>`
 
 1. Lee `CLAUDE.md` de la raíz y `<P>/CLAUDE.md` si existe; mandan sobre tus costumbres. En especial: estructura de cinco carpetas, rutas relativas, uv (nunca `pip`), inglés en código y README.
 2. Lee `<P>/README.md` si existe, las notas de traspaso (`<P>/docs/scratchpad.md` o similar) y `<P>/docs/preguntas_abiertas.md` si existe (las respuestas de los autores mandan).
-3. Localiza el **enunciado** (imagen en `<P>/docs/` o diapositiva *Homework / Lab Activities*: `pdftotext "<pdf>" - | grep -n -i -A12 -E 'homework|lab activit'`) y, si la tarea implementa un método de un paper de `docs/`, lee la parte del paper que describe el algoritmo y sus parámetros.
-4. Lee el código existente que vas a tocar y el de alrededor: escribe como él (nombres, densidad de comentarios, estilo de funciones cortas con docstring de una línea, numpy/scipy, sin clases salvo que hagan falta).
+3. **Especificación del lector de papers.** Si existe `<P>/docs/explicacion_paper.md` (lo escribe `lector-papers` conversando con el usuario), es tu especificación: léelo entero antes de nada. Implementa su pseudocódigo (§5) con sus parámetros (§6), sus datos (§7) y sus experimentos (§8), sigue su guía de implementación (§9) y ejecuta **todas** sus comprobaciones. Las decisiones del usuario que recoge (§10) mandan sobre el paper. Abre el PDF solo en las páginas que cita. Si el `.md` es incompleto, ambiguo o contradice al paper, **no rellenes el hueco a tu manera**: toma la opción más conservadora solo si es trivial, anótala en `cambios_r{k}.md` y avísalo en tu mensaje final para que el orquestador lo consulte. No edites `explicacion_paper.md`.
+4. Localiza el **enunciado** (imagen en `<P>/docs/` o diapositiva *Homework / Lab Activities*: `pdftotext "<pdf>" - | grep -n -i -A12 -E 'homework|lab activit'`) y, si la tarea implementa un método de un paper de `docs/`, lee la parte del paper que describe el algoritmo y sus parámetros.
+5. Lee el código existente que vas a tocar y el de alrededor: escribe como él (nombres, densidad de comentarios, estilo de funciones cortas con docstring de una línea, numpy/scipy, sin clases salvo que hagan falta).
 
 ## Ronda 1
 
@@ -26,7 +27,7 @@ El prompt te da: la carpeta del subproyecto `<P>`, el directorio del bucle `<D>`
    - VRP: fuentes C++ en `src/cpp/`, compiladas con Zig vía uv, ejecutable en `ignore/bin/`.
 3. **Verifica de verdad**: ejecuta el código (tests, una instancia pequeña, el notebook con nbconvert si hace falta) y comprueba que la salida es correcta, no solo que no falla. Contrasta con soluciones de referencia de `data/` o con las cifras del paper cuando existan.
 4. Regenera en `results/` solo lo que la tarea pide. Antes de lanzar algo largo (notebooks de minutos, barridos de muchas instancias) estima el tiempo; si pasa de ~10 min y la tarea no lo autoriza expresamente, no lo lances: dilo en tu mensaje final para que el orquestador lo consulte.
-5. Escribe `<D>/cambios_r1.md`: **todos** los ficheros que has creado, modificado o regenerado (el revisor revisa esa lista) y por qué, cómo lo has verificado (comando y resultado) y qué queda pendiente.
+5. Escribe `<D>/cambios_r1.md`: **todos** los ficheros que has creado, modificado o regenerado (el revisor revisa esa lista) y por qué, cómo lo has verificado (comando y resultado) y qué queda pendiente. Si hay `explicacion_paper.md`, añade qué pasos del pseudocódigo cubre cada función (`§5 paso 3 → src/x.py:sim_route`), el resultado de cada comprobación de su §9 y la comparación con sus cifras de referencia (§8).
 
 ## Rondas siguientes
 

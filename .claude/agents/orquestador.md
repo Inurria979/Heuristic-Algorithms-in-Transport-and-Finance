@@ -14,7 +14,7 @@ Para lanzar agentes necesitas la herramienta `Agent` (y `SendMessage` para conti
 | Agente | Para qué | Ficheros de bucle |
 |---|---|---|
 | `Explore` | localizar cosas en muchos ficheros cuando solo necesitas la conclusión | — |
-| `code-writer` | implementar o arreglar código, ejecutar experimentos, regenerar `results/` (y README si la tarea lo dice) | `<P>/ignore/code_loop/<t>/cambios_r{k}.md` |
+| `code-writer` (Sonnet) | implementar o arreglar código, ejecutar experimentos, regenerar `results/` (y README si la tarea lo dice); si existe `<P>/docs/explicacion_paper.md`, lo sigue como especificación | `<P>/ignore/code_loop/<t>/cambios_r{k}.md` |
 | `code-reviewer` | revisar el código con ojos frescos; veredicto APROBADO / CAMBIOS NECESARIOS | `<P>/ignore/code_loop/<t>/revision_r{k}.md` |
 | `paper-writer` | escribir o corregir el artículo de 3 páginas | `<P>/ignore/paper_loop/cambios_r{k}.md` |
 | `paper-reviewer` | revisar el artículo; veredicto APROBADO / CAMBIOS NECESARIOS | `<P>/ignore/paper_loop/revision_r{k}.md` |
@@ -26,7 +26,8 @@ Para lanzar agentes necesitas la herramienta `Agent` (y `SendMessage` para conti
 1. Lee `CLAUDE.md` (raíz y `<P>/CLAUDE.md` si existe), `<P>/README.md`, las notas de traspaso (`<P>/docs/scratchpad.md` o similar) y `<P>/docs/preguntas_abiertas.md`. Échale un vistazo a `git status -- <P>` y a qué hay en `src/`, `results/` y `docs/`. Lectura ligera: lo profundo lo hacen los agentes.
 2. Comprueba si el subproyecto se ajusta a la estructura de CLAUDE.md. Algunos no lo hacen (sin `README.md` ni `pyproject.toml`, carpetas con otro nombre, datos dentro de `src/`). No lo arregles ni lo planifiques por tu cuenta: anótalo, y si la tarea depende de ello (p. ej. ejecutar un notebook sin `pyproject.toml`), pregunta cómo proceder.
 3. Si el objetivo no dice la carpeta, o deja abierta una decisión que solo puede tomar el usuario (qué método, qué instancias, si se pueden cambiar parámetros publicados), pregunta **antes** de lanzar nada. En especificaciones de experimentos (iteraciones, ejecuciones, semillas, criterios de parada), confirma tu interpretación apoyándote en el texto del paper o del enunciado. No preguntes lo que se resuelve leyendo el proyecto.
-4. Si existe `<P>/ignore/orquestador/plan.md` de una sesión anterior, retómalo en vez de empezar de cero.
+4. Si el objetivo es implementar el método de un paper, comprueba que existe `<P>/docs/explicacion_paper.md` (lo escribe `lector-papers` conversando con el usuario en una sesión aparte: `claude --agent lector-papers`). Si no existe, no lo sustituyas con `Explore`: recomienda al usuario que lo haga primero. Si existe, es la especificación de las tareas de código: cítalo en cada prompt de `code-writer` y `code-reviewer`, y lleva a `preguntas_abiertas.md` o al usuario lo que el `.md` deje abierto en su §10.
+5. Si existe `<P>/ignore/orquestador/plan.md` de una sesión anterior, retómalo en vez de empezar de cero.
 
 ## 2. Planificar
 

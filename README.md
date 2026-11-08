@@ -17,12 +17,13 @@ project, and `DTOP/`, which has no code.
 | [`TOP/`](TOP/) | **Team Orienteering Problem.** PJS savings heuristic of Panadero et al. (2021) with a grid of 21 α values, GRASP with geometric and softmax biased randomisation and a local search on the elite solutions, written in Rust with rayon and run on the 387 Chao instances. | Finished | [`src/rust/`](TOP/src/rust/) + 3-page article in `docs/` (`.tex` and PDF) + class presentation |
 | [`GRASP/`](GRASP/) | **GRASP for the TSP.** Clarke & Wright savings construction with a classical RCL versus four biased-randomisation rules (geometric, triangular, Zipf, softmax), plus 2-opt, on 7 TSPLIB test instances. | Finished | [`src/GRASP_TSP_savings_biased_EN.ipynb`](GRASP/src/GRASP_TSP_savings_biased_EN.ipynb) + 3-page article in `docs/` (`.tex` and PDF) + class presentation |
 | [`PFSP/`](PFSP/) | **Permutation Flow-Shop Problem.** NEH, RandNEH and ILS-ESP of Juan et al. (2014) with an adaptive β of our own, on five Taillard instances (20 to 500 jobs). | Finished (instance files still to be added to `data/`) | [`src/PFSP_RandNEH_ILS_ESP_en.ipynb`](PFSP/src/PFSP_RandNEH_ILS_ESP_en.ipynb) + 3-page article in `docs/` (`.tex` and PDF) + class presentation |
+| [`simTOP/`](simTOP/) | **Team Orienteering Problem with stochastic travel times.** Simheuristic of Juan et al. (2019): PJS savings with geometric biased randomisation and local search, then fast and intensive Monte Carlo simulation with lognormal times, on the 141 feasible instances of Chao sets p1–p3 and three variance levels; Numba. | Code and results finished (article pending) | [`src/simtop.py`](simTOP/src/simtop.py) + [`src/analysis.ipynb`](simTOP/src/analysis.ipynb) |
 
 Each folder has its own `README.md` with the model, the method and the results.
 
 ## Layout
 
-Every code project (`POP/`, `TSP/`, `VRP/`, `TOP/`, `GRASP/`, `PFSP/`) follows the same structure:
+Every code project (`POP/`, `TSP/`, `VRP/`, `TOP/`, `GRASP/`, `PFSP/`, `simTOP/`) follows the same structure:
 
 | Folder | Contents | In git |
 |---|---|---|
@@ -91,12 +92,20 @@ Heuristic-Algorithms-in-Transport-and-Finance/
 │   ├── results/            gap, time and verdict CSVs, figures
 │   └── ignore/
 │
-└── PFSP/
-    ├── .python-version (3.13), pyproject.toml, uv.lock, .venv/
-    ├── src/                PFSP_RandNEH_ILS_ESP_en.ipynb (+ Spanish version)
-    ├── data/               Taillard instances (not added yet)
-    ├── docs/               the article (.tex + PDF), presentation
-    ├── results/            experiment A and B CSVs (+ two earlier versions)
+├── PFSP/
+│   ├── .python-version (3.13), pyproject.toml, uv.lock, .venv/
+│   ├── src/                PFSP_RandNEH_ILS_ESP_en.ipynb (+ Spanish version)
+│   ├── data/               Taillard instances (not added yet)
+│   ├── docs/               the article (.tex + PDF), presentation
+│   ├── results/            experiment A and B CSVs (+ two earlier versions)
+│   └── ignore/
+│
+└── simTOP/
+    ├── .python-version, pyproject.toml, uv.lock, .venv/
+    ├── src/                simtop.py, checks.py, run_experiment.py, analysis.ipynb
+    ├── data/               the 387 Chao instances and bks_chao.csv
+    ├── docs/               Juan et al. (2019) paper, specification
+    ├── results/            runs.csv, best.csv, summary CSVs, figures/
     └── ignore/
 ```
 

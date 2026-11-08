@@ -1,7 +1,7 @@
 # Scratchpad del repositorio — traspaso entre sesiones
 
 Notas internas, en español, para que otra sesión (de Claude o de un compañero) siga desde
-aquí. Última actualización: **02-11-2026**. Las notas de un solo proyecto van en su propio
+aquí. Última actualización: **08-11-2026**. Las notas de un solo proyecto van en su propio
 `docs/` (p. ej. [`TOP/docs/scratchpad.md`](TOP/docs/scratchpad.md)); aquí va lo que afecta a
 varios proyectos o al repositorio entero.
 
@@ -23,6 +23,15 @@ Todo está en `.claude/` y se sube a git para que lo tengan los compañeros
 | `orquestador` | `.claude/agents/orquestador.md` | Planifica (código → `results/` → README → artículo), **espera el visto bueno del usuario** antes de lanzar, reparte entre los agentes y no escribe código ni artículos. Plan en `<P>/ignore/orquestador/plan.md`. Solo funciona como sesión principal (`/orquestar` o `claude --agent orquestador`): un subagente no puede lanzar a otros. |
 | `code-writer` | `.claude/agents/code-writer.md` | Implementa y verifica ejecutando. No cambia parámetros publicados, no toca `data/` ni los artículos, no arregla desviaciones de estructura previas. Lista en `cambios_r{k}.md` todos los ficheros que toca. |
 | `code-reviewer` | `.claude/agents/code-reviewer.md` | Revisa solo lo que cambia la tarea (lo compara con `estado_inicial.txt`, que guarda el orquestador). Puede ejecutar pruebas pequeñas, pero nunca escribe en `src/`, `data/` ni `results/` (salidas a `<D>/tmp/`, `uv run --locked`, nada de `--inplace`). Veredicto APROBADO / CAMBIOS NECESARIOS. |
+
+**Añadido el 08-11-2026:** agente `lector-papers` (`.claude/agents/lector-papers.md`, Opus,
+esfuerzo high). Se abre en sesión propia (`claude --agent lector-papers`), lee los PDFs de
+`<P>/docs/`, conversa con el usuario y escribe `<P>/docs/explicacion_paper.md` (explicación
+sencilla + especificación: pseudocódigo, parámetros con fuente, datos, experimentos con cifras de
+referencia, comprobaciones, decisiones). `code-writer` pasa a `model: sonnet` y sigue ese `.md`
+como especificación; `code-reviewer` y el orquestador lo usan como referencia. Primer uso:
+`simTOP/` (carpeta nueva, sin commit; solo `docs/` con un PDF y `src/` vacío, falta el resto de
+la estructura).
 
 Bucle de código: carpeta por tarea, `<P>/ignore/code_loop/<tarea>/` (`estado_inicial.txt`,
 `cambios_r{k}.md`, `revision_r{k}.md`). Dentro de un subproyecto, las tareas de código van una
