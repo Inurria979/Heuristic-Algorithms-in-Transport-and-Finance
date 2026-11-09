@@ -189,7 +189,7 @@ calcula el gap.
 - **No viene principalmente de la construcción:** nuestro gap determinista es de solo 2,4–3,2 puntos.
 
 **Una causa plausible, que no podemos comprobar sin su código:** Juan et al. simulan dentro del bucle
-de búsqueda y paran por tiempo, con ejecuciones de hasta unos 400 s, así que la simulación puede
+de búsqueda, con ejecuciones de hasta unos 400 s, así que la simulación puede
 llevar la búsqueda hacia rutas con holgura. Nosotros solo simulamos 7 candidatas elegidas con tiempos
 esperados.
 
@@ -257,7 +257,7 @@ una observación, no como una explicación.**
 Una ejecución tarda entre 0,05 y 0,23 s (de media 0,07 s en p2 y 0,16–0,17 s en p1 y p3). Las 1 269
 ejecuciones tardan unos 25 s en **12 hilos de un AMD Ryzen 5 5500U de 6 núcleos**. Lo pesado son núcleos
 de Numba; los números aleatorios salen de NumPy. La figura 4 del paper da de unos segundos a unos 400 s,
-en Java, en un Xeon a 3,7 GHz y parando por tiempo: solo cabe compararlo cualitativamente. Como es tan
+en Java, en un Xeon a 3,7 GHz y con un criterio de parada que no especifica: solo cabe compararlo cualitativamente. Como es tan
 barato, probamos todos los α en todos los niveles en lugar de ajustar uno.
 
 ---

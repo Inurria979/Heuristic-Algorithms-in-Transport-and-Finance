@@ -28,6 +28,10 @@ wheels/
 .vscode/
 .idea/
 .claude/settings.local.json
+
+# API keys (segunda-opinion MCP and any other tool). Never committed.
+.env
+.env.*
 .claude/history/
 
 # ─── LaTeX auxiliary files (the article of each project) ─────────────────────

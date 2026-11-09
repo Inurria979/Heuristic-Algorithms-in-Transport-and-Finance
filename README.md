@@ -42,7 +42,8 @@ Heuristic-Algorithms-in-Transport-and-Finance/
 ├── .gitattributes      LF normalisation inside the repo, binaries marked as such
 ├── CLAUDE.md           instructions for the coding agent
 ├── scratchpad.md       handoff notes between work sessions (Spanish): state, reviews, pending items
-├── .claude/            agents and slash commands for Claude Code (/paper-loop, /orquestar)
+├── .claude/            agents, slash commands (/paper-loop, /orquestar) and the segunda-opinion MCP server
+├── .mcp.json           registers the segunda-opinion MCP server (second opinions from Gemini, DeepSeek...)
 ├── README.md           this file
 │
 ├── POP/

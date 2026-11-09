@@ -1,0 +1,85 @@
+# Catalogue of second-opinion models. Free tiers only (decision of the authors, 2026-11-09).
+# Keys live in user environment variables, never in this file.
+#
+# Fields
+#   adapter           "gemini" (native SDK, reads PDFs) or "openai_compat" (any /chat/completions API)
+#   base_url          only for openai_compat
+#   api_key_env       name of the environment variable that holds the key
+#   model             model id; check with `uv run server.py --check`
+#   fallback_models   tried in order if `model` fails (overloaded 503, retired 404...)
+#   enabled           false = kept in the catalogue but never called
+#   pdf_native        true = PDFs are sent as files; false = text extracted with pypdf
+#   max_input_tokens  input budget; longer inputs are truncated proportionally
+#   max_output_tokens
+#   timeout_s         per request, whole answer
+#   extra_body        openai_compat only: extra request fields (e.g. reasoning switches)
+#   first_token_s     openai_compat only: give up if the model sends nothing for this long (overloaded)
+#   trains_on_data    informative: free tiers may use the prompts for training
+#
+# To add a model, copy a block. Any OpenAI-compatible host works (OpenRouter, Groq, Ollama...).
+
+[gemini]
+adapter = "gemini"
+api_key_env = "GEMINI_API_KEY"          # https://aistudio.google.com/apikey
+model = "gemini-3.7-flash"              # newest Flash that answered on the free tier (09-11-2026)
+fallback_models = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
+enabled = true
+pdf_native = true
+max_input_tokens = 900_000
+max_output_tokens = 16_000
+timeout_s = 300
+trains_on_data = true
+
+[deepseek]
+adapter = "openai_compat"
+base_url = "https://integrate.api.nvidia.com/v1"   # NVIDIA NIM, free with rate limits
+api_key_env = "NVIDIA_API_KEY"          # https://build.nvidia.com
+model = "deepseek-ai/deepseek-v4.1-flash"
+fallback_models = ["z-ai/glm-5.3-flash"]   # both often saturated on the free tier (09-11-2026)
+enabled = true
+pdf_native = false
+max_input_tokens = 110_000
+max_output_tokens = 32_000
+timeout_s = 600
+first_token_s = 90
+trains_on_data = true
+
+[nemotron]
+adapter = "openai_compat"
+base_url = "https://integrate.api.nvidia.com/v1"
+api_key_env = "NVIDIA_API_KEY"
+model = "nvidia/nemotron-3-ultra-550b-a55b"   # answered in ~1 s on 09-11-2026
+fallback_models = ["mistralai/mistral-large-4-1t-a52b"]
+enabled = true
+pdf_native = false
+max_input_tokens = 110_000
+max_output_tokens = 32_000              # reasoning model: 8k were all spent thinking (09-11-2026)
+timeout_s = 600
+first_token_s = 90
+trains_on_data = true
+
+# NIM lists many retired models that answer 404 "Function ... Not found for account".
+[glm]
+adapter = "openai_compat"
+base_url = "https://integrate.api.nvidia.com/v1"
+api_key_env = "NVIDIA_API_KEY"
+model = "z-ai/glm-5.3-flash"
+enabled = false                         # used as DeepSeek's fallback instead
+pdf_native = false
+max_input_tokens = 110_000
+max_output_tokens = 8_000
+timeout_s = 600
+first_token_s = 90
+trains_on_data = true
+
+# [openrouter-example]
+# adapter = "openai_compat"
+# base_url = "https://openrouter.ai/api/v1"
+# api_key_env = "OPENROUTER_API_KEY"
+# model = "<vendor>/<model>:free"
+# enabled = true
+# pdf_native = false
+# max_input_tokens = 100_000
+# max_output_tokens = 8_000
+# timeout_s = 300
+# trains_on_data = true

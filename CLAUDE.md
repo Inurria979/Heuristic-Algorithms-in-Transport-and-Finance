@@ -119,5 +119,21 @@ en `DTOP/` salvo que se pida expresamente.
   Informe en `<CARPETA>/ignore/revision_final/informe.md`.
 - Orden habitual: (`explicacion_paper.md` →) código → `results/` → README → artículo → presentación
   → `revisor-final`.
+- Notebooks: la skill `cuaderno-explicado` (`.claude/skills/cuaderno-explicado/SKILL.md`) dice cómo debe quedar el
+  notebook principal (introducción, recorrido paso a paso, experimento, conclusiones) sin cambiar `results/`.
+  `code-writer` la sigue y `code-reviewer` la usa como lista de comprobación.
 - Plan en `<CARPETA>/ignore/orquestador/plan.md`; informes de código en
   `<CARPETA>/ignore/code_loop/<tarea>/`. No se suben.
+
+## Segunda opinión (MCP con modelos externos)
+
+- Servidor MCP `segunda-opinion` en `.claude/mcp/segunda-opinion/` (proyecto uv propio, Python
+  3.14), registrado en `.mcp.json` de la raíz. Herramientas `list_models` y `second_opinion`:
+  manda los ficheros de una práctica a modelos de otras familias (Gemini por su API; DeepSeek y
+  GLM por NVIDIA NIM), **solo planes gratuitos**, y devuelve sus hallazgos. Catálogo de modelos en
+  `providers.toml`; para añadir uno basta un bloque nuevo.
+- Claves en variables de entorno de usuario (`GEMINI_API_KEY`, `NVIDIA_API_KEY`), nunca en el repo.
+  Comprobar con `uv run server.py --check` desde esa carpeta.
+- `paper-reviewer`, `code-reviewer` y `revisor-final` la llaman **siempre al final de cada
+  revisión**, después de su propia revisión. Verifican cada hallazgo; solo los confirmados cuentan.
+  Si falla o no hay claves, se anota y se sigue. Respuestas en `<CARPETA>/ignore/segunda_opinion/`.

@@ -10,10 +10,14 @@ from time import perf_counter
 from typing import NamedTuple
 
 import numpy as np
+import pandas as pd
 from numba import njit
 
 DATA = Path(__file__).resolve().parent.parent / "data" / "top-data"
+BKS_FILE = DATA.parent / "bks_chao.csv"
+SETS = ("p1", "p2", "p3")       # Chao sets used (those with a known BKS and feasible sizes)
 EPS = 1e-9                      # tolerance of the tmax check, as in TOP (model.rs)
+MERGE_PRETOL = 1e-6             # cheap prefilter of a merge; the exact check uses EPS
 BETA = 0.3                      # geometric biased randomisation
 N_BR = 50                       # biased-randomised constructions per run
 N_FAST, N_FINAL = 7, 3          # candidates to the fast / intensive simulation
@@ -21,9 +25,6 @@ R_FAST, R_INT = 200, 1000       # replicas of each simulation
 C_LEVELS = (0.05, 0.25, 0.75)
 ALPHAS = (0.25, 0.5, 0.75)
 BASE_SEED = 2019
-# idx_inst is the position of the instance in the alphabetical list of the file stems of
-# the 387 Chao instances (instance_names()). p1-p3 come first, so the index is the same in
-# the list of p1-p3 alone.
 
 
 class Instance(NamedTuple):
@@ -47,18 +48,37 @@ def instance_names(directory=DATA):
     return sorted(p.stem for p in Path(directory).glob("*.txt"))
 
 
-def load_instance(path):
-    """Read a Chao instance ("n;N", "m;M", "tmax;T", then N lines "x;y;reward")."""
+def travel_times(x, y):
+    """Euclidean expected travel-time matrix between the nodes (x, y)."""
+    dx, dy = x[:, None] - x[None, :], y[:, None] - y[None, :]
+    return np.sqrt(dx * dx + dy * dy)
+
+
+def read_instance(path):
+    """Read a Chao instance file ("n;N", "m;M", "tmax;T", then N lines "x;y;reward")."""
     path = Path(path)
-    if not path.exists():
-        path = DATA / f"{path.name}.txt"
     lines = [ln.strip() for ln in path.read_text().splitlines() if ln.strip()]
     n, m, tmax = (float(ln.split(";")[1]) for ln in lines[:3])
     nodes = np.array([[float(v) for v in ln.split(";")] for ln in lines[3:]])
     assert len(nodes) == int(n), f"{path}: header says n={int(n)}, found {len(nodes)} nodes"
     x, y, reward = nodes[:, 0].copy(), nodes[:, 1].copy(), nodes[:, 2].copy()
-    dx, dy = x[:, None] - x[None, :], y[:, None] - y[None, :]
-    return Instance(path.stem, int(m), tmax, x, y, reward, np.sqrt(dx * dx + dy * dy))
+    return Instance(path.stem, int(m), tmax, x, y, reward, travel_times(x, y))
+
+
+def load_instance(name):
+    """Instance by name (e.g. "p2.3.g") from the data folder; use read_instance for a path."""
+    return read_instance(DATA / f"{name}.txt")
+
+
+def load_bks():
+    """Best-known rewards of the Chao instances (PSOiA), a Series indexed by instance name."""
+    return pd.read_csv(BKS_FILE).set_index("instance").bks
+
+
+def feasible_instances():
+    """Names of the instances of p1-p3 that have a BKS (141), in alphabetical order."""
+    bks = load_bks()
+    return [n for n in instance_names() if n in bks.index and n.split(".")[0] in SETS]
 
 
 # ------------------------------------------------------------ F2 lognormal law
@@ -84,61 +104,69 @@ def _route_time(t, nodes, ln):
 
 
 @njit(cache=True)
-def _construct(t, reward, tmax, m, arc_i, arc_j, u, beta, use_br):
-    """PJS merging over the sorted arc list; `u` are the uniforms of the BR selector."""
+def _reachable(t, tmax):
+    """reach[k]: customer k fits alone (source -> k -> sink within tmax); False for source and sink."""
     n = t.shape[0]
-    sink = n - 1
-    nxt = -np.ones(n, np.int64)
-    route_of = -np.ones(n, np.int64)
-    head = -np.ones(n, np.int64)
-    tail = -np.ones(n, np.int64)
-    rtime = np.zeros(n)
-    rrew = np.zeros(n)
-    rlen = np.zeros(n, np.int64)
-    alive = np.zeros(n, np.bool_)
+    reach = np.zeros(n, np.bool_)
+    for k in range(1, n - 1):
+        reach[k] = t[0, k] + t[k, n - 1] <= tmax + EPS
+    return reach
+
+
+@njit(cache=True)
+def _dummy_routes(t, reward, reach, route_of, head, tail, rtime, rrew, rlen, alive):
+    """PJS step 1: one route source -> i -> sink for every reachable customer."""
     one = np.zeros(1, np.int64)
-    for i in range(1, sink):                       # step 1: dummy routes
-        one[0] = i
-        tm = _route_time(t, one, 1)
-        if tm <= tmax + EPS:
+    for i in range(1, t.shape[0] - 1):
+        if reach[i]:
+            one[0] = i
             route_of[i], head[i], tail[i] = i, i, i
-            rtime[i], rrew[i], rlen[i], alive[i] = tm, reward[i], 1, True
-    nar = arc_i.shape[0]
-    left = np.arange(nar - 1, -1, -1)              # top of the list at the end
-    cnt = nar
-    for step in range(nar):                        # step 3: merging
-        if use_br:
-            k = int(np.log(1.0 - u[step]) / np.log(1.0 - beta)) % cnt
-            pos = cnt - 1 - k
-            idx = left[pos]
-            for q in range(pos, cnt - 1):
-                left[q] = left[q + 1]
-            cnt -= 1
-        else:
-            idx = step
-        i, j = arc_i[idx], arc_j[idx]
-        a, b = route_of[i], route_of[j]
-        if a < 0 or b < 0 or a == b or tail[a] != i or head[b] != j:
-            continue
-        if rtime[a] + rtime[b] - t[i, sink] - t[0, j] + t[i, j] > tmax + 1e-6:
-            continue
-        nxt[i] = j                                 # tentative link, exact time leg by leg
-        tm, prev, node = 0.0, 0, head[a]
-        while node != -1:
-            tm += t[prev, node]
-            prev, node = node, nxt[node]
-        tm += t[prev, sink]
-        if tm > tmax + EPS:
-            nxt[i] = -1
-            continue
-        node = head[b]
-        while node != -1:
-            route_of[node] = a
-            node = nxt[node]
-        tail[a] = tail[b]
-        rtime[a], rrew[a], rlen[a] = tm, rrew[a] + rrew[b], rlen[a] + rlen[b]
-        alive[b] = False
-    ids = np.empty(n, np.int64)                    # step 4: sort by reward desc, time asc
+            rtime[i], rrew[i], rlen[i], alive[i] = _route_time(t, one, 1), reward[i], 1, True
+
+
+@njit(cache=True)
+def _br_pick(left, cnt, u, beta):
+    """Biased pick: remove from left[:cnt] the arc at geometric position k from the top and return it."""
+    k = int(np.log(1.0 - u) / np.log(1.0 - beta)) % cnt
+    pos = cnt - 1 - k
+    idx = left[pos]
+    for q in range(pos, cnt - 1):
+        left[q] = left[q + 1]
+    return idx
+
+
+@njit(cache=True)
+def _try_merge(t, tmax, i, j, nxt, route_of, head, tail, rtime, rrew, rlen, alive):
+    """PJS step 3 for arc (i, j): join the route ending at i with the one starting at j if it fits."""
+    sink = t.shape[0] - 1
+    a, b = route_of[i], route_of[j]
+    if a < 0 or b < 0 or a == b or tail[a] != i or head[b] != j:
+        return
+    if rtime[a] + rtime[b] - t[i, sink] - t[0, j] + t[i, j] > tmax + MERGE_PRETOL:
+        return
+    nxt[i] = j                                     # tentative link, exact time leg by leg
+    tm, prev, node = 0.0, 0, head[a]
+    while node != -1:
+        tm += t[prev, node]
+        prev, node = node, nxt[node]
+    tm += t[prev, sink]
+    if tm > tmax + EPS:
+        nxt[i] = -1
+        return
+    node = head[b]
+    while node != -1:
+        route_of[node] = a
+        node = nxt[node]
+    tail[a] = tail[b]
+    rtime[a], rrew[a], rlen[a] = tm, rrew[a] + rrew[b], rlen[a] + rlen[b]
+    alive[b] = False
+
+
+@njit(cache=True)
+def _select_routes(m, rtime, rrew, alive, head, nxt):
+    """PJS step 4: the m best routes (reward desc, time asc) as padded arrays (routes, lens)."""
+    n = alive.shape[0]
+    ids = np.empty(n, np.int64)
     ni = 0
     for a in range(n):
         if alive[a]:
@@ -159,6 +187,32 @@ def _construct(t, reward, tmax, m, arc_i, arc_j, u, beta, use_br):
             node = nxt[node]
         lens[s] = ln
     return routes, lens
+
+
+@njit(cache=True)
+def _construct(t, reward, tmax, m, arc_i, arc_j, u, beta, use_br, reach):
+    """PJS merging over the sorted arc list; `u` are the uniforms of the BR selector."""
+    n = t.shape[0]
+    nxt = -np.ones(n, np.int64)
+    route_of = -np.ones(n, np.int64)
+    head = -np.ones(n, np.int64)
+    tail = -np.ones(n, np.int64)
+    rtime = np.zeros(n)
+    rrew = np.zeros(n)
+    rlen = np.zeros(n, np.int64)
+    alive = np.zeros(n, np.bool_)
+    _dummy_routes(t, reward, reach, route_of, head, tail, rtime, rrew, rlen, alive)
+    nar = arc_i.shape[0]
+    left = np.arange(nar - 1, -1, -1)              # top of the list at the end
+    cnt = nar
+    for step in range(nar):
+        if use_br:
+            idx = _br_pick(left, cnt, u[step], beta)
+            cnt -= 1
+        else:
+            idx = step
+        _try_merge(t, tmax, arc_i[idx], arc_j[idx], nxt, route_of, head, tail, rtime, rrew, rlen, alive)
+    return _select_routes(m, rtime, rrew, alive, head, nxt)
 
 
 @njit(cache=True)
@@ -190,10 +244,11 @@ def _two_opt(t, nodes, ln):
 
 @njit(cache=True)
 def _insert_one(t, reward, tmax, routes, lens, rtime, visited, reach):
-    """Insert the highest-reward unvisited customer that fits at its cheapest position."""
+    """Insert the best-reward unvisited customer that fits; True if one was inserted."""
     n = t.shape[0]
     sink = n - 1
     m = routes.shape[0]
+    # banned: (customer, route, position) slots that passed the delta test but failed the exact time check
     banned = np.zeros((n, m, n + 1), np.bool_)
     tmp = np.empty(n + 1, np.int64)
     while True:
@@ -235,10 +290,9 @@ def _insert_one(t, reward, tmax, routes, lens, rtime, visited, reach):
 
 
 @njit(cache=True)
-def _local_search(t, reward, tmax, routes0, lens0):
+def _local_search(t, reward, tmax, routes0, lens0, reach):
     """Repeat { 2-opt in every route; insert one customer } until nothing can be inserted."""
     n = t.shape[0]
-    sink = n - 1
     routes, lens = routes0.copy(), lens0.copy()
     m = routes.shape[0]
     visited = np.zeros(n, np.bool_)
@@ -248,11 +302,6 @@ def _local_search(t, reward, tmax, routes0, lens0):
             rtime[r] = _route_time(t, routes[r], lens[r])
             for q in range(lens[r]):
                 visited[routes[r, q]] = True
-    reach = np.zeros(n, np.bool_)
-    one = np.zeros(1, np.int64)
-    for k in range(1, sink):
-        one[0] = k
-        reach[k] = _route_time(t, one, 1) <= tmax + EPS
     while True:
         for r in range(m):
             if lens[r] > 0 and _two_opt(t, routes[r], lens[r]) > 0:
@@ -324,12 +373,28 @@ def canonical(sol):
     return frozenset(tuple(r) for r in sol)
 
 
+def format_routes(sol):
+    """Routes as a CSV string: customers joined by "-", routes by ";"."""
+    return ";".join("-".join(map(str, route)) for route in sol)
+
+
+def parse_routes(s):
+    """Inverse of format_routes: list of tuples of customer indices ([] for an empty or missing value)."""
+    return [tuple(int(v) for v in route.split("-")) for route in str(s).split(";") if route and route != "nan"]
+
+
 # ------------------------------------------------------------- F3-F5 PJS + BR
 
-def savings_arcs(inst, alpha):
+def reachable(inst):
+    """Boolean array: customer k can be served alone within tmax (source -> k -> sink)."""
+    return _reachable(inst.t, inst.tmax)
+
+
+def savings_arcs(inst, alpha, reach=None):
     """Arcs (i, j) between reachable customers sorted by decreasing enriched savings."""
     t, sink = inst.t, inst.n - 1
-    cust = np.array([i for i in range(1, sink) if t[0, i] + t[i, sink] <= inst.tmax + EPS], np.int64)
+    reach = reachable(inst) if reach is None else reach
+    cust = np.flatnonzero(reach).astype(np.int64)
     a, b = np.triu_indices(len(cust), 1)
     ii = np.empty(2 * len(a), np.int64)
     jj = np.empty(2 * len(a), np.int64)
@@ -341,29 +406,32 @@ def savings_arcs(inst, alpha):
     return ii[order], jj[order]
 
 
-def pjs_construct(inst, alpha, selector="greedy", rng=None, beta=BETA, arcs=None):
+def pjs_construct(inst, alpha, selector="greedy", rng=None, beta=BETA, arcs=None, reach=None):
     """PJS savings heuristic; selector "greedy" (F4) or "br" (F5, geometric, needs rng)."""
-    arc_i, arc_j = savings_arcs(inst, alpha) if arcs is None else arcs
     assert selector in ("greedy", "br"), f"unknown selector {selector!r}"
     use_br = selector == "br"
+    assert not use_br or rng is not None, 'selector "br" needs an rng'
+    reach = reachable(inst) if reach is None else reach
+    arc_i, arc_j = savings_arcs(inst, alpha, reach) if arcs is None else arcs
     u = rng.random(len(arc_i)) if use_br else np.zeros(1)
-    routes, lens = _construct(inst.t, inst.reward, inst.tmax, inst.m, arc_i, arc_j, u, beta, use_br)
+    routes, lens = _construct(inst.t, inst.reward, inst.tmax, inst.m, arc_i, arc_j, u, beta, use_br, reach)
     return _unpack(routes, lens)
 
 
 # ------------------------------------------------------------ F6 local search
 
-def local_search(inst, sol):
+def local_search(inst, sol, reach=None):
     """2-opt (first improvement) + best-reward insertion, repeated; never worsens `sol`."""
+    # empty vehicle slots (fewer than m routes in `sol`) stay empty: PJS never leaves one that could be used
+    reach = reachable(inst) if reach is None else reach
     routes, lens = _pack(inst, sol)
-    return _unpack(*_local_search(inst.t, inst.reward, inst.tmax, routes, lens))
+    return _unpack(*_local_search(inst.t, inst.reward, inst.tmax, routes, lens, reach))
 
 
 # ------------------------------------------------------------- F7 simulation
 
 def sample_scenarios(mu, sigma, t, R, rng):
-    """Travel times T[r, i, j] = T[r, j, i] ~ LogNormal(mu_ij, sigma_ij), independent per
-    arc and replica; 0 where t_ij = 0. Shape (R, N, N)."""
+    """Travel times T[r, i, j] = T[r, j, i] ~ LogNormal(mu_ij, sigma_ij), shape (R, N, N); 0 where t_ij = 0."""
     N = t.shape[0]
     z = rng.standard_normal((R, N, N))
     full = np.exp(mu[None] + sigma[None] * z) * (t > 0)[None]
@@ -382,18 +450,29 @@ def simulate(inst, sol, T):
 # ------------------------------------------------------------------ F8 run
 
 def case_seed(idx_inst, idx_c, idx_alpha, base=BASE_SEED):
-    """SeedSequence of one (instance, c, alpha) case."""
+    """SeedSequence of a case; idx_inst is the position in instance_names() (all 387 files, not the 141)."""
     return np.random.SeedSequence([base, idx_inst, idx_c, idx_alpha])
 
 
+def _seed_sequence(seed):
+    """Fresh copy of a seed: spawn() mutates a SeedSequence, and the same seed must give the same run."""
+    if isinstance(seed, np.random.SeedSequence):
+        return np.random.SeedSequence(seed.entropy, spawn_key=seed.spawn_key)
+    return np.random.SeedSequence(seed)
+
+
+def spawn_rngs(seed):
+    """The three independent generators of a run, in this order: biased randomisation, fast, intensive."""
+    return tuple(np.random.default_rng(s) for s in _seed_sequence(seed).spawn(3))
+
+
 def generate_candidates(inst, alpha, rng_br, n_br=N_BR, beta=BETA):
-    """Greedy + n_br biased-randomised constructions, each improved by local search.
-    Returns (all, distinct): lists in generation order; `distinct` keeps the first of each
-    canonical form."""
-    arcs = savings_arcs(inst, alpha)
-    cands = [local_search(inst, pjs_construct(inst, alpha, "greedy", arcs=arcs))]
+    """Greedy + n_br BR constructions, each with local search; returns (all, distinct) in generation order."""
+    reach = reachable(inst)
+    arcs = savings_arcs(inst, alpha, reach)
+    cands = [local_search(inst, pjs_construct(inst, alpha, "greedy", arcs=arcs, reach=reach), reach)]
     for _ in range(n_br):
-        cands.append(local_search(inst, pjs_construct(inst, alpha, "br", rng_br, beta, arcs)))
+        cands.append(local_search(inst, pjs_construct(inst, alpha, "br", rng_br, beta, arcs, reach), reach))
     seen, distinct = set(), []
     for k, sol in enumerate(cands):
         form = canonical(sol)
@@ -403,35 +482,40 @@ def generate_candidates(inst, alpha, rng_br, n_br=N_BR, beta=BETA):
     return cands, distinct
 
 
-def simheuristic(inst, c, alpha, seed):
-    """One run: 51 candidates -> 7 by deterministic reward -> fast simulation (common
-    random numbers) -> 3 -> intensive simulation (fresh days) -> winner."""
-    start = perf_counter()
-    # fresh copy: spawn() mutates a SeedSequence, and the same seed must give the same run
-    if isinstance(seed, np.random.SeedSequence):
-        ss = np.random.SeedSequence(seed.entropy, spawn_key=seed.spawn_key)
-    else:
-        ss = np.random.SeedSequence(seed)
-    s_br, s_fast, s_int = ss.spawn(3)
-    rng_br, rng_fast, rng_int = (np.random.default_rng(s) for s in (s_br, s_fast, s_int))
-    cands, distinct = generate_candidates(inst, alpha, rng_br)
-    # deterministic filter: reward desc, total time asc, generation order
+def deterministic_filter(inst, distinct, n_keep=N_FAST):
+    """The n_keep best distinct candidates as (-reward, time, k, sol): reward desc, time asc, generation order."""
     rows = [(-det_reward(inst, sol), det_time(inst, sol), k, sol) for k, sol in distinct]
     rows.sort(key=lambda r: r[:3])
-    top = rows[:N_FAST]
-    mu, sigma = lognormal_params(inst.t, c)
-    t_fast = sample_scenarios(mu, sigma, inst.t, R_FAST, rng_fast)
+    return rows[:n_keep]
+
+
+def fast_screen(inst, top, t_fast, n_keep=N_FINAL):
+    """Common-random-numbers screen: (indices in `top` of the n_keep best fast means, all fast means)."""
     fast = [simulate(inst, r[3], t_fast)[0] for r in top]
-    order = sorted(range(len(top)), key=lambda q: (-fast[q], top[q][0], q))[:N_FINAL]
-    t_int = sample_scenarios(mu, sigma, inst.t, R_INT, rng_int)
+    order = sorted(range(len(top)), key=lambda q: (-fast[q], top[q][0], q))[:n_keep]
+    return order, fast
+
+
+def intensive_winner(inst, top, order, t_int):
+    """Simulate the finalists on fresh days; returns (position of the winner in `order`, all results)."""
     final = [simulate(inst, top[q][3], t_int) for q in order]
-    w = max(range(len(order)), key=lambda q: (final[q][0], -q))
+    return max(range(len(order)), key=lambda q: (final[q][0], -q)), final
+
+
+def simheuristic(inst, c, alpha, seed):
+    """One run: 51 candidates -> 7 (deterministic) -> 3 (fast simulation, CRN) -> 1 (intensive simulation)."""
+    start = perf_counter()
+    rng_br, rng_fast, rng_int = spawn_rngs(seed)
+    cands, distinct = generate_candidates(inst, alpha, rng_br)
+    top = deterministic_filter(inst, distinct)
+    mu, sigma = lognormal_params(inst.t, c)
+    order, fast = fast_screen(inst, top, sample_scenarios(mu, sigma, inst.t, R_FAST, rng_fast))
+    w, final = intensive_winner(inst, top, order, sample_scenarios(mu, sigma, inst.t, R_INT, rng_int))
     q = order[w]
-    sol = top[q][3]
     return {
         "det_reward": -top[q][0], "fast_mean": fast[q], "exp_reward": final[w][0],
         "exp_std": final[w][1], "fail_rate": final[w][2], "n_distinct": len(distinct),
-        "winner_is_greedy": top[q][2] == 0, "routes": sol, "seed": str(ss.entropy),
-        "max_det_reward": -rows[0][0], "greedy_ls_reward": det_reward(inst, cands[0]),
+        "winner_is_greedy": top[q][2] == 0, "routes": top[q][3], "seed": str(_seed_sequence(seed).entropy),
+        "max_det_reward": -top[0][0], "greedy_ls_reward": det_reward(inst, cands[0]),
         "time_s": perf_counter() - start,
     }

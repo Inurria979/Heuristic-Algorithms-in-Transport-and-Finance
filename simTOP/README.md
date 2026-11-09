@@ -46,7 +46,7 @@ numbers are drawn with numpy, so results do not depend on Numba's generator.
 | Replicas, fast / intensive | 200 / 1000 | paper (p. 1912) |
 | `α` | 0.25, 0.5, 0.75 (all three run) | our choice (the paper gives none) |
 | Biased randomisation | geometric, β = 0.3 | our choice (as in `TOP/`; the paper cites Grasas et al. 2017) |
-| Iterations | 50 biased constructions + 1 greedy per run | our choice (the paper stops by time) |
+| Iterations | 50 biased constructions + 1 greedy per run | our choice (the paper does not specify its stopping criterion) |
 | Use of simulation | one filter after the search (7 → 3) | our choice (the paper simulates inside the search loop and updates the base and best solutions with the simulated value) |
 | Filter 7 → 3 | 7 by deterministic reward, 3 by fast mean | our choice |
 | Local search | 2-opt + insertion of `TOP/` | our choice (the paper: destruction–reconstruction + 2-opt) |
@@ -66,7 +66,7 @@ column of `runs.csv` holds that list.
 | [`src/simtop.py`](src/simtop.py) | Instance loading, lognormal law, PJS + biased randomisation, local search, scenarios, simulation and the simheuristic (Numba) |
 | [`src/checks.py`](src/checks.py) | 18 sanity checks (see below) |
 | [`src/run_experiment.py`](src/run_experiment.py) | The 1 269 runs; writes `results/runs.csv` and `results/best.csv` |
-| [`src/analysis.ipynb`](src/analysis.ipynb) | Tables and figures of the results (reads `../results/`) |
+| [`src/analysis.ipynb`](src/analysis.ipynb) | Explained notebook: the method step by step on `p2.3.g`, then the tables and figures of the results (reads `../results/`) |
 | [`data/`](data/) | All 387 Chao instances (only p1–p3 are used) and `bks_chao.csv` |
 | [`docs/`](docs/) | Paper, specification (`explicacion_paper.md`), open questions, the 3-page article (`.tex` + PDF), the presentation (`.pptx` + PDF) and the scripts of both |
 | [`results/`](results/) | `runs.csv`, `best.csv`, summary CSVs, `figures/` |
@@ -117,7 +117,7 @@ points; [`results/gap_best_by_level.csv`](results/gap_best_by_level.csv)):
 | M | 26.02 (20.04–31.97) | ≈ 17 (9–20) |
 | H | 31.56 (26.35–36.44) | ≈ 24 (19–28) |
 
-Our medians are 7–9 points above the paper's, with the same ordering L < M < H. A plausible cause is that the paper simulates inside the search loop (and stops by time, up to about 400 s in its Fig. 4): the simulated value updates the base and the best solution, so the search can move towards routes with slack, whereas we simulate only 7 candidates chosen with expected times; we cannot check it without their code. The largest gap of the
+Our medians are 7–9 points above the paper's, with the same ordering L < M < H. A plausible cause is that the paper simulates inside the search loop (with runs of up to about 400 s in its Fig. 4): the simulated value updates the base and the best solution, so the search can move towards routes with slack, whereas we simulate only 7 candidates chosen with expected times; we cannot check it without their code. The largest gap of the
 best α is 42.7 % (p1.2.k, `c = 0.75`); none exceeds 50 %.
 
 **Decomposition of the gap** (best α, mean %, [`results/gap_decomposition_by_level.csv`](results/gap_decomposition_by_level.csv)):
@@ -152,8 +152,7 @@ Set and `tmax` are confounded (p2 also has 21 nodes).
 
 **Time per run** (mean, [`results/time_by_set_level.csv`](results/time_by_set_level.csv)): 0.16 s in p1,
 0.07 s in p2 and 0.16–0.17 s in p3, at most 0.23 s per run (0.053–0.234 s over the 1 269 runs, after
-loading the Numba kernels); the paper's Fig. 4 reports a few seconds up to 400 s on a Xeon in Java with a time
-stop, so only a qualitative comparison makes sense.
+loading the Numba kernels); the paper's Fig. 4 reports a few seconds up to 400 s on a Xeon in Java, so only a qualitative comparison makes sense.
 
 ## Limitations and future work
 

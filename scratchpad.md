@@ -1,7 +1,7 @@
 # Scratchpad del repositorio — traspaso entre sesiones
 
 Notas internas, en español, para que otra sesión (de Claude o de un compañero) siga desde
-aquí. Última actualización: **08-11-2026**. Las notas de un solo proyecto van en su propio
+aquí. Última actualización: **09-11-2026**. Las notas de un solo proyecto van en su propio
 `docs/` (p. ej. [`TOP/docs/scratchpad.md`](TOP/docs/scratchpad.md)); aquí va lo que afecta a
 varios proyectos o al repositorio entero.
 
@@ -250,3 +250,52 @@ le gustó que TOP se hiciera en Rust: no es un problema.
 - Regla de nombres: las prácticas de simulación empiezan por `sim`, seguido del problema en mayúsculas (`simTOP`). Está recogida en la sección Git de `CLAUDE.md`.
 - **TOP:** la cita de Chao et al. (1996) estaba mal; era el paper del OP, con páginas 475–489. Corregida a «The team orienteering problem», EJOR 88(3):464–474, en el `.tex`, el PDF (sigue en 3 páginas) y `esquema_articulo.md`. El artículo de TOP ya estaba entregado.
 - Aviso: `tectonic` no abre el `.out` de hyperref cuando el nombre del `.tex` lleva espacios. Para compilar, copia el `.tex` a un nombre sin espacios.
+
+## 6. MCP de segunda opinión (09-11-2026)
+
+- `.claude/mcp/segunda-opinion/` + `.mcp.json`. Decisiones de los autores: ubicación en `.claude/`,
+  **solo planes gratuitos**, se pueden enviar los PDFs del profesor, y los tres revisores la piden
+  **siempre al final de cada revisión**.
+- Modelos: `gemini-flash-latest` (alias; el nivel gratuito ya no incluye Pro de forma fiable),
+  DeepSeek `deepseek-ai/deepseek-v4.1-flash` por NVIDIA NIM; GLM `z-ai/glm-5.3-flash` en el
+  catálogo pero `enabled = false`. OpenRouter no tenía DeepSeek ni GLM gratis el 09-11.
+- Claves en `.claude/mcp/segunda-opinion/.env` (ignorado por git; el servidor lo carga al arrancar).
+  Gemini: proyecto propio `segunda-opinion` en AI Studio, sin facturación. NVIDIA: cuenta nueva.
+- Pruebas reales (09-11) sobre el artículo de simTOP:
+  - NIM: los 404 «Not found for account» son modelos retirados que siguen listados; DeepSeek, GLM,
+    MiniMax y gpt-oss están **saturados** en el nivel gratuito (tampoco responden en el chat de la web).
+    Responden `nvidia/nemotron-3-ultra-550b-a55b` (1 s) y `mistral-large-4`. Añadido el proveedor
+    `nemotron` (reserva: Mistral Large 4); DeepSeek se queda con GLM de reserva.
+  - Llamadas OpenAI-compatibles en streaming con `first_token_s = 90`: un modelo saturado falla en
+    90 s. Nemotron razona mucho: con 8k tokens de salida devolvía vacío; ahora 32k.
+  - Gemini Flash da 503/504 a ratos (saturación); cadena de reserva 3.7 → 3.6 → 3.5 → 3.5-lite → 3.1-lite.
+  - Resultado: Gemini (respondió `gemini-3.1-flash-lite`, el último de la cadena) 2 menores;
+    Nemotron 2 B, 2 I y 1 M.
+- `revisor-final` sobre simTOP (09-11), con esas respuestas como segunda opinión: **CAMBIOS
+  NECESARIOS, 0 B, 2 I, 5 M** (`simTOP/ignore/revision_final/informe.md`). Código y resultados
+  reproducen exactos; cifras OK; 3 páginas. Los dos I vienen del hallazgo de Nemotron: el artículo
+  (l. 158, lista de decisiones l. 169–175) y la presentación (diapositivas 8 y 12, más el guion)
+  presentan como fiel al paper que solo se simula al final, cuando el paper simula dentro del bucle.
+  Es una decisión [usuario]: falta contarla como desviación. De la segunda opinión, 1 hallazgo
+  útil confirmado (rebajado de B a I), 1 en parte, 1 duplicado y 4 rechazados (incluido el
+  0.30→0.33, que habría metido un error; queda M-4: añadir «over the BKS» en l. 257). Gemini no
+  aportó nada.
+- `mcp` instalado es 2.x: `MCPServer` (antes `FastMCP`).
+
+## 7. Fidelidad al paper en los agentes (09-11-2026)
+
+Motivo: en simTOP nadie marcó que «simular solo al final» se aparta del paper (que simula dentro
+del bucle): la especificación lo describía como el método del paper, los revisores la toman como
+referencia y no discuten las decisiones [usuario], y «faithful to the paper» (§3) sobrevivió a cuatro
+rondas pese a que §5 decía lo contrario. Lo detectó Nemotron, que leyó el paper sin la especificación.
+Cambios:
+- `lector-papers` y `/leer-paper`: diagramas de flujo siempre con `Read`; §3 y §5a describen el
+  método del paper y §5b el nuestro; etiqueta **[usuario, desviación]**; nueva §11 obligatoria
+  «Desviaciones del paper», que pasa entera a lo que deben contar artículo y presentación.
+- `paper-reviewer` y `revisor-final`: escriben primero su propio esquema del paper (en
+  `ignore/.../tmp/esquema_paper.md`) sin leer nuestros documentos; tabla «Diseño frente al paper»;
+  revisión cruzada de todas las frases de fidelidad. Contar como fiel una desviación es B si no se
+  reconoce en ninguna parte, I si se reconoce en otra sección.
+- `code-reviewer`: si el código se aparta del paper en algo estructural no recogido en la §11, lo anota
+  para los autores (no cuenta contra el escritor).
+- `simTOP/docs/explicacion_paper.md` sigue con la estructura antigua (sin §5a/§5b ni §11): pendiente.

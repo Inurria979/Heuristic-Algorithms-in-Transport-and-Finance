@@ -118,7 +118,7 @@ and its median lies below its mean. Slack is worth reward.
 The method separates building solutions quickly with expected times from judging them by
 simulation~\cite{juan2019}. One run for an instance, a level $c$ and a weight $\alpha$ has six steps:
 \begin{enumerate}
-\item \textbf{Candidates.} The savings heuristic of Panadero et al.~\cite{panadero2021} (PJS) starts with
+\item \textbf{Candidates.} The savings heuristic of Panadero et al.~\cite{panadero2021}, which the course calls \emph{PJS}, starts with
 a route $0\to i\to n+1$ per reachable customer. For every ordered pair it computes the time saved by
 joining the route that ends at $i$ with the one that starts at $j$, $s_{ij}=t_{i,n+1}+t_{0j}-t_{ij}$
 (both directions, since the depots differ), and the \emph{preference}
@@ -155,7 +155,9 @@ The greedy candidate guarantees that the best candidate in deterministic reward 
 plus local search, but not that the final solution is: the winner is chosen by simulation, and the
 greedy one may not even pass the filter. The price of the design is that every step before the
 simulation uses expected times, so routes are filled up to $t_{\max}$ and the filter keeps the fullest.
-We keep this choice, faithful to the paper, and measure its effect in Section~\ref{sec:res}.
+Planning with expected times follows the paper (their Eq.~3); filtering on deterministic reward before
+simulating is our choice (Section~\ref{sec:impl}). We keep both and measure their effect in
+Section~\ref{sec:res}.
 
 \section{Implementation}
 \label{sec:impl}
@@ -169,7 +171,7 @@ candidates of a phase.
 Juan et al.\ describe their simheuristic in a few short paragraphs, without parameter values; only the levels of
 $c$ and the 200 and 1000 replicas come from~\cite{juan2019}. The rest is ours: $\alpha\in\{0.25,0.5,0.75\}$,
 all three run, because $s_{ij}$ and $u_i+u_j$ have different scales; $\beta=0.3$, as in our TOP
-assignment; 50 iterations instead of a time limit, for reproducibility; the filter $7\to3$, to keep a run
+assignment; 50 iterations as stopping rule, which the paper does not specify; the filter $7\to3$, to keep a run
 within seconds; and the local search of our TOP assignment instead of their destruction--reconstruction
 plus 2-opt. As a check, the greedy PJS gives exactly the reward of that assignment for the three
 $\alpha$ on the 141 instances.
@@ -229,7 +231,7 @@ at L and M our lower quartile is about their upper one. The comparison is approx
 read by eye, and the paper says neither which instances enter each box (we assume p1--p3, the only sets
 solved by the SAA) nor how the gap is computed. Our deterministic gap is only 2.4--3.2 points, so the
 difference does not come mainly from the construction. A plausible cause is that Juan et al.\ simulate
-inside the search loop and stop by time (their Figure~4 shows runs of up to about 400\,s), so simulation can steer the search towards
+inside the search loop (their Figure~4 shows runs of up to about 400\,s), so simulation can steer the search towards
 routes with slack, whereas we simulate only 7 candidates chosen with expected times; we cannot check it
 without their code.
 
@@ -247,7 +249,7 @@ does.
 
 \textbf{The weight $\alpha$ hardly matters.} Over the 1\,269 runs the mean gap of each fixed $\alpha$
 varies by less than 0.6 points within each level, and the best $\alpha$ is 0.25, 0.5 and 0.75 in 142, 138
-and 143 cases. Yet keeping the best $\alpha$ per case lowers the mean gap by 1.3--2.2 points, partly
+and 143 of the 423 cases. Yet keeping the best $\alpha$ per case lowers the mean gap by 1.3--2.2 points, partly
 through the selection bias of picking the best of three with the reported mean.
 
 \textbf{Set and $t_{\max}$.} Since short routes are relatively more variable, one would expect larger
@@ -259,7 +261,7 @@ confounded, since p2 has only 21 nodes: we report the trend as an observation, n
 
 \textbf{Time.} A run takes 0.053--0.234\,s (means 0.16--0.17\,s in p1 and p3, 0.07\,s in p2), and the 1\,269
 runs about 25\,s on 12 threads. Figure~4 of~\cite{juan2019} reports a few seconds to about 400\,s in Java
-on a 3.7\,GHz Xeon with a time limit, so only a qualitative comparison makes sense. Runs this cheap let
+on a 3.7\,GHz Xeon, so only a qualitative comparison makes sense. Runs this cheap let
 us try every $\alpha$ at every level instead of tuning one.
 
 \section{Conclusions}

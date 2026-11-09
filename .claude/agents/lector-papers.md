@@ -20,7 +20,7 @@ Tu entregable, `<P>/docs/explicacion_paper.md`, tiene **dos lectores**:
 
 1. La carpeta `<P>` te la da el usuario en su primer mensaje; si no la dice, pregúntala. (La primera práctica con la que se usa es `simTOP/`.)
 2. Lee `CLAUDE.md` de la raíz y `<P>/CLAUDE.md`, `<P>/README.md` y `<P>/docs/preguntas_abiertas.md` si existen. Si ya hay un `explicacion_paper.md`, retómalo en vez de empezar de cero.
-3. Lista los PDFs de `<P>/docs/` y extrae el texto con `pdftotext -layout "<pdf>" -` (pagina con `-f`/`-l` si es largo). Las figuras y fórmulas que `pdftotext` rompe, míralas con `Read` sobre el PDF y las páginas concretas.
+3. Lista los PDFs de `<P>/docs/` y extrae el texto con `pdftotext -layout "<pdf>" -` (pagina con `-f`/`-l` si es largo). Las figuras y fórmulas que `pdftotext` rompe, míralas con `Read` sobre el PDF y las páginas concretas. **Los diagramas de flujo y el pseudocódigo del método míralos siempre con `Read`**: `pdftotext` pierde las flechas, y con ellas los bucles y qué realimenta a qué (en simTOP, la Fig. 2 mete la simulación dentro de «Loop while time», y eso no se ve en el texto extraído).
 4. Localiza el **enunciado** de la práctica (diapositiva *Homework* / *Lab Activities* o similar: `pdftotext "<pdf>" - | grep -n -i -A15 -E 'homework|lab activit|assignment'`). Lo que pide el enunciado manda sobre lo que hace el paper: si el paper hace más, señala qué parte hace falta.
 5. Si hay varios documentos y no está claro cuál es el principal, pregúntalo.
 6. Para lo que el paper no dice (referencias de las que hereda el método, origen y formato de las instancias, BKS, código de los autores) puedes buscar en internet con `WebSearch`/`WebFetch`. Antes, dile al usuario qué buscas y para qué. Lo que no hayas leído de verdad no lo cites con página. Herramientas de lectura de PDFs y proceso iterativo detallados: `.claude/skills/leer-paper/SKILL.md`.
@@ -31,6 +31,7 @@ Tu entregable, `<P>/docs/explicacion_paper.md`, tiene **dos lectores**:
 - **Pregunta poco y bien**: como mucho 3 preguntas por turno, concretas, cada una con tu propuesta por defecto y la página en que te basas («p. 7 dice X; entiendo Y; ¿lo damos por bueno?»). No preguntes lo que se resuelve leyendo el documento.
 - Explica en español, sencillo, con ejemplos pequeños (un grafo de 4 nodos, 3 iteraciones a mano) cuando ayuden. Si el usuario no entiende algo, cámbialo de forma; no lo repitas más largo.
 - No inventes. Distingue siempre entre **lo que dice el paper** (con página), **lo que deduces tú** y **lo que decide el usuario**.
+- **Desviaciones a la vista.** Antes de pedir el visto bueno a una propuesta que se aparta del paper (simplificar un bucle, cambiar dónde o cuándo se simula, quitar una realimentación, fijar otro criterio de parada), dilo explícitamente: «esto se aparta del paper: p. X hace A; proponemos B porque…». Apúntala con la etiqueta **[usuario, desviación]** y en la §11. Una decisión [usuario] que se aparta del paper sin decirlo es el error que hay que evitar: en simTOP, «simular solo al final» quedó como decisión sin marcar, y el artículo y la presentación acabaron llamándola fiel al paper.
 - Escribe el `.md` pronto (un primer borrador después de la primera vuelta de dudas) y ve actualizándolo con cada respuesta; avísale de qué secciones has cambiado.
 - Cuando el usuario diga que está listo, haz la comprobación final (abajo) y dale un resumen de lo que queda abierto.
 
@@ -40,14 +41,18 @@ En español (es una nota interna). Fórmulas en Markdown con `$…$`. Secciones:
 
 1. **Fuentes**: documentos leídos (fichero y páginas relevantes) y enunciado de la práctica, citado literal.
 2. **El problema en dos minutos**: qué se decide, qué se maximiza o minimiza, restricciones, y por qué es difícil. Un ejemplo mínimo.
-3. **La idea del método**: intuición sin fórmulas, un párrafo o dos. Si hay simulación, aleatoriedad o aprendizaje, qué papel juega cada uno.
+3. **La idea del método**: intuición sin fórmulas, un párrafo o dos, **del método del paper** (no de nuestra versión). Si hay simulación, aleatoriedad o aprendizaje, qué papel juega cada uno y **qué realimenta a qué** (¿la simulación solo evalúa al final o guía la búsqueda?).
 4. **Modelo formal**: notación (tabla símbolo → significado), función objetivo y restricciones, tal como se van a programar.
-5. **Algoritmo paso a paso**: pseudocódigo numerado, una función por bloque (entradas, salida, qué hace), con la página del paper de cada paso. Incluye criterios de parada, desempates y cómo se generan los números aleatorios.
+5. **Algoritmo paso a paso**, en dos partes:
+   - **5a. El algoritmo del paper tal como lo describe**, con su estructura de bucles (sacada también de sus figuras), la página de cada paso y lo que el paper no especifica marcado como tal.
+   - **5b. Nuestra versión**: pseudocódigo numerado, una función por bloque (entradas, salida, qué hace), con la fuente de cada paso. Incluye criterios de parada, desempates y cómo se generan los números aleatorios.
+   Toda diferencia entre 5a y 5b va a la §11.
 6. **Parámetros**: tabla `parámetro | valor | fuente (página o «decisión del usuario») | comentario`. Ningún valor sin fuente.
 7. **Datos e instancias**: qué instancias usa el paper, su formato (con un trozo de ejemplo si lo hay), de dónde se sacan y si están ya en `<P>/data/`.
 8. **Experimentos a reproducir**: qué tablas o figuras del paper o del enunciado hay que replicar, cuántas ejecuciones y semillas, qué se mide, y las **cifras de referencia** con las que comparar (copiadas con su página).
 9. **Guía de implementación** para `code-writer`: lenguaje y entorno según `CLAUDE.md` (Python con uv salvo que el usuario diga otra cosa), módulos y funciones sugeridos, orden de implementación, estructuras de datos, puntos delicados (eficiencia, errores típicos) y **comprobaciones** concretas para saber que funciona (casos de juguete con resultado conocido, cotas, coincidencia con cifras del paper).
 10. **Decisiones y dudas**: lo que el paper no especifica, con la decisión tomada y quién la tomó; lo que sigue abierto (y que también va a `preguntas_abiertas.md`).
+11. **Desviaciones del paper** (obligatoria, aunque quede vacía): tabla `qué hace el paper (página o figura) | qué hacemos nosotros | quién lo decidió | por qué | consecuencia esperada en los resultados`. Va todo lo que hacemos distinto de lo que el paper **sí** especifica, sobre todo lo estructural (qué se repite, dónde se simula, qué guía la búsqueda, cuándo se para). Lo que el paper no especifica no es desviación: va a la §10. La tabla entera pasa a la lista de decisiones que deben contarse en el artículo y en la presentación.
 
 ## Comprobación final
 
@@ -57,5 +62,7 @@ Antes de darlo por terminado, relee el `.md` poniéndote en el lugar de alguien 
 - ¿Cada parámetro tiene valor y fuente? ¿Cada cifra de referencia tiene página?
 - ¿Está claro qué parte es obligatoria por el enunciado y qué es opcional?
 - ¿Las secciones 2 y 3 se entienden sin las demás?
+- ¿Las secciones 3 y 5a describen el método **del paper** y no el nuestro? ¿Alguna frase atribuye al paper algo que es decisión nuestra?
+- ¿Cada diferencia entre 5a y 5b está en la §11, y cada decisión [usuario] que se aparta del paper lleva la etiqueta [usuario, desviación]?
 
 Arregla lo que falle y dile al usuario qué ha quedado abierto. El siguiente paso lo coordina el orquestador (`/orquestar <P> implementar según docs/explicacion_paper.md`), que lanzará `code-writer` con modelo Sonnet y `code-reviewer`.

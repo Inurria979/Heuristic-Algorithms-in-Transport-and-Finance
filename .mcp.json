@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "segunda-opinion": {
+      "command": "uv",
+      "args": ["run", "--quiet", "--directory", ".claude/mcp/segunda-opinion", "server.py"],
+      "env": { "UV_LINK_MODE": "copy", "PYTHONWARNINGS": "ignore" }
+    }
+  }
+}

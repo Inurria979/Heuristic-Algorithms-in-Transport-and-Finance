@@ -1,0 +1,10 @@
+[project]
+name = "segunda-opinion"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "google-genai>=3.0.0",
+    "httpx>=0.28.1",
+    "mcp>=2.0",
+    "pypdf>=7.0.0",
+]

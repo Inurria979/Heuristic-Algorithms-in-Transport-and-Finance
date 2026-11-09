@@ -16,7 +16,8 @@ El prompt te da: la carpeta del subproyecto `<P>`, el directorio del bucle `<D>`
 2. Lee `<P>/README.md` si existe, las notas de traspaso (`<P>/docs/scratchpad.md` o similar) y `<P>/docs/preguntas_abiertas.md` si existe (las respuestas de los autores mandan).
 3. **Especificación del lector de papers.** Si existe `<P>/docs/explicacion_paper.md` (lo escribe `lector-papers` conversando con el usuario), es tu especificación: léelo entero antes de nada. Implementa su pseudocódigo (§5) con sus parámetros (§6), sus datos (§7) y sus experimentos (§8), sigue su guía de implementación (§9) y ejecuta **todas** sus comprobaciones. Las decisiones del usuario que recoge (§10) mandan sobre el paper. Abre el PDF solo en las páginas que cita. Si el `.md` es incompleto, ambiguo o contradice al paper, **no rellenes el hueco a tu manera**: toma la opción más conservadora solo si es trivial, anótala en `cambios_r{k}.md` y avísalo en tu mensaje final para que el orquestador lo consulte. No edites `explicacion_paper.md`.
 4. Localiza el **enunciado** (imagen en `<P>/docs/` o diapositiva *Homework / Lab Activities*: `pdftotext "<pdf>" - | grep -n -i -A12 -E 'homework|lab activit'`) y, si la tarea implementa un método de un paper de `docs/`, lee la parte del paper que describe el algoritmo y sus parámetros.
-5. Lee el código existente que vas a tocar y el de alrededor: escribe como él (nombres, densidad de comentarios, estilo de funciones cortas con docstring de una línea, numpy/scipy, sin clases salvo que hagan falta).
+5. Si la tarea crea o rehace un notebook, lee antes `.claude/skills/cuaderno-explicado/SKILL.md` y síguelo (estructura del cuaderno explicado y regla de que `results/` no cambie).
+6. Lee el código existente que vas a tocar y el de alrededor: escribe como él (nombres, densidad de comentarios, estilo de funciones cortas con docstring de una línea, numpy/scipy, sin clases salvo que hagan falta).
 
 ## Ronda 1
 

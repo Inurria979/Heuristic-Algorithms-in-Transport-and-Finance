@@ -76,7 +76,9 @@ heredocs se comen `\a`, `\\` y similares. Comprueba con `grep` que la edición s
 4. **Cuando el usuario pida «explícame más»**: cambia la forma, no la longitud. Una tabla con 3–4
    números, un ejemplo a mano o una consecuencia práctica (en simTOP: «Var = c·t hace que el mismo c
    pese más en las instancias con tmax pequeño»).
-5. **Apunta cada decisión en el momento**, con su autor: [paper p. X], [deducción], [usuario], [TOP].
+5. **Apunta cada decisión en el momento**, con su autor: [paper p. X], [deducción], [usuario], [TOP],
+   y **[usuario, desviación]** si se aparta de algo que el paper sí especifica (va también a la §11
+   «Desviaciones del paper»). Al proponerla, di antes qué hace el paper y en qué página.
    Si el usuario dice «estas decisiones son mías», que conste así. Las propuestas tuyas que acepte
    pasan a «propuesta aceptada por el usuario».
 6. **Contradicciones del usuario**: no elijas tú. Apunta la interpretación más probable y pide
@@ -92,6 +94,9 @@ heredocs se comen `\a`, `\\` y similares. Comprueba con `grep` que la edición s
    - relee el `.md` entero buscando cifras o frases de borradores anteriores (iteraciones, tamaños,
      «PENDIENTE» olvidados) y afirmaciones demasiado fuertes (en simTOP: «nunca es peor que la
      greedy», que solo era cierto en determinista);
+   - compara la §5a (algoritmo del paper) con la §5b (el nuestro) paso a paso, bucles incluidos, y
+     comprueba que cada diferencia está en la §11 y en la lista de decisiones para el artículo y la
+     presentación;
    - escribe el apartado **«Cosas que chirrían»**: incoherencias del paper (texto frente a figura,
      notación, lo que no especifica) y riesgos de nuestro diseño que se verán en los resultados;
    - lo que el usuario deje para más adelante va a **«Trabajo futuro»**, con ideas concretas;

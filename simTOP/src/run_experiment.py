@@ -37,17 +37,18 @@ def run_case(args):
             "alpha": alpha, "seed": r["seed"], "det_reward": r["det_reward"], "fast_mean": r["fast_mean"],
             "exp_reward": r["exp_reward"], "exp_std": r["exp_std"], "fail_rate": r["fail_rate"],
             "n_distinct": r["n_distinct"], "winner_is_greedy": r["winner_is_greedy"],
-            "time_s": r["time_s"], "routes": ";".join("-".join(map(str, rt)) for rt in r["routes"])}
+            "time_s": r["time_s"], "routes": st.format_routes(r["routes"])}
 
 
 def main(limit=None, out=RESULTS):
     """Run the experiment (optionally only the first `limit` instances) and write the CSVs."""
-    bks = pd.read_csv(ROOT / "data" / "bks_chao.csv").set_index("instance").bks
-    names = st.instance_names()
-    feasible = [n for n in names if n in bks.index and n.split(".")[0] in ("p1", "p2", "p3")]
-    if limit:
+    bks = st.load_bks()
+    names = st.instance_names()                    # idx_inst indexes all 387 files, not the 141
+    feasible = st.feasible_instances()
+    if limit is not None:
         feasible = feasible[:limit]
-    jobs = [(n, names.index(n), ic, ia) for n in feasible for ic in range(3) for ia in range(3)]
+    jobs = [(n, names.index(n), ic, ia) for n in feasible
+            for ic in range(len(st.C_LEVELS)) for ia in range(len(st.ALPHAS))]
     start = perf_counter()
     with ProcessPoolExecutor(initializer=warm_up) as pool:
         rows = list(pool.map(run_case, jobs, chunksize=8))
@@ -63,7 +64,7 @@ def main(limit=None, out=RESULTS):
     # best alpha per (instance, c): highest exp_reward, ties -> smallest alpha (rows are sorted by alpha)
     best = df.loc[df.groupby(["instance", "c"], sort=True)["exp_reward"].idxmax()].reset_index(drop=True)
     out = Path(out)
-    out.mkdir(exist_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
     df.to_csv(out / "runs.csv", index=False)
     best.to_csv(out / "best.csv", index=False)
     print(f"{len(df)} runs, {len(best)} best rows, total {perf_counter() - start:.1f} s")
