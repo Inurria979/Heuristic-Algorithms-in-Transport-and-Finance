@@ -53,7 +53,7 @@ Python the simheuristic of Juan et al.\ (2019): savings-based candidates with bi
 local search, then a fast and an intensive Monte Carlo simulation. Over the 141 feasible instances of
 Chao's sets p1--p3 and three variance levels, the mean gap to the deterministic best-known solutions is
 $14.65$, $25.02$ and $30.51\,\%$, with medians 7--9 points above those read from the paper's figure; a
-run takes 0.05--0.23\,s. About 80--90\,\% of the gap is lost in the simulation: candidates built with
+run takes 0.05--0.23\,s. About 80--90\,\% of the gap is loss due to uncertainty: candidates built with
 expected times fill the time limit, and on average 13--29\,\% of winning routes arrive late on a
 simulated day.
 \end{abstract}
@@ -71,7 +71,7 @@ with a \emph{simheuristic}: a heuristic whose candidates are evaluated by Monte 
 implement only the simheuristic, since the SAA needs a commercial solver.
 
 The instances are those of Chao et al.~\cite{chao1996}, with random travel times as in~\cite{juan2019}.
-An instance named \texttt{p1.2.a} belongs to set~1, has $m=2$ vehicles and the smallest $t_{\max}$ of the set-1 instances with two vehicles. We
+An instance named \texttt{p1.2.b} belongs to set~1 and has $m=2$ vehicles; the letter orders $t_{\max}$ within the set-1 instances with two vehicles. We
 use sets p1, p2 and p3 (32, 21 and 33 nodes), the only ones below 35 nodes, on which Juan et al.\ could
 also run the SAA. Each file gives $m$, $t_{\max}$ and the coordinates and reward of every node. Six p1
 instances have no reachable customer, which leaves 141 (48, 33 and 60 per set), with $t_{\max}$ from
@@ -166,7 +166,7 @@ sanity checks and the notebook \texttt{analysis.ipynb} the tables and figures. T
 numbers are drawn with NumPy, and each day is an $N\times N$ matrix of symmetric times read by all the
 candidates of a phase.
 
-Juan et al.\ describe their simheuristic in one paragraph without parameter values; only the levels of
+Juan et al.\ describe their simheuristic in a few short paragraphs, without parameter values; only the levels of
 $c$ and the 200 and 1000 replicas come from~\cite{juan2019}. The rest is ours: $\alpha\in\{0.25,0.5,0.75\}$,
 all three run, because $s_{ij}$ and $u_i+u_j$ have different scales; $\beta=0.3$, as in our TOP
 assignment; 50 iterations instead of a time limit, for reproducibility; the filter $7\to3$, to keep a run
@@ -175,7 +175,7 @@ plus 2-opt. As a check, the greedy PJS gives exactly the reward of that assignme
 $\alpha$ on the 141 instances.
 
 Each (instance, $c$, $\alpha$) is run once, $1\,269$ runs, with seed
-\texttt{SeedSequence([2019, $i$, $k$, $l$])}, the indices of the instance (alphabetical order), of $c$
+\texttt{SeedSequence([2019, $i$, $k$, $l$])}, the indices of the instance (position among the 387 Chao files, in alphabetical order), of $c$
 and of $\alpha$, split into three generators (biased randomisation,
 fast and intensive simulation). For each (instance, $c$) we keep the best $\alpha$, 423 cases; levels are
 never mixed, since each $c$ is a different problem. With $\bar R$ the intensive mean of the winner and
@@ -267,7 +267,7 @@ us try every $\alpha$ at every level instead of tuning one.
 The simheuristic builds candidates for a deterministic world and lets Monte Carlo simulation, on
 common days to rank and new days to measure, choose among them. On the 141 small Chao instances it
 gives the ordering L\,<\,M\,<\,H of Juan et al., with mean gaps of $14.65$, $25.02$ and $30.51\,\%$, in a
-fraction of a second per run. The winners usually match the BKS in deterministic terms, but the median
+fraction of a second per run. About half of the winners (51--58\,\%) match the BKS in deterministic terms, but the median
 route fills $0.93\,t_{\max}$ and on average 13--29\,\% of the routes arrive late on a simulated day:
 simulation can only choose among routes built without slack. The next step is a safety margin: building with $t_{\max}-\delta$ while simulating
 with the true $t_{\max}$, with $\delta$ from a grid, from the route variance

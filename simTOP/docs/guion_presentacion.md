@@ -1,13 +1,13 @@
 # Guion de la presentación de simTOP
 
 Guion para [`simTOP_simheuristic.pptx`](simTOP_simheuristic.pptx), diapositiva a diapositiva. Las
-notas del orador del `.pptx` son un resumen de este texto. Duración total: unos 18 minutos sin
+notas del orador del `.pptx` son un resumen de este texto. Duración total: unos 18–19 minutos sin
 preguntas.
 
-**Versión 2**, alineada con el artículo aprobado
+**Versión 4** (correcciones de las revisiones finales), alineada con el artículo aprobado
 ([`Stochastic Team Orienteering Problem.tex`](Stochastic%20Team%20Orienteering%20Problem.tex)): mismas
-cifras, mismos términos y mismas cautelas. La fuente de cada cifra está en
-`../ignore/presentacion/notas_v2.md`.
+cifras, mismos términos y mismas cautelas. La fuente de cada cifra está en las notas
+`ignore/presentacion/notas_v4.md` (nota local; `ignore/` no se sube).
 
 Términos que usamos igual que el artículo: *gap* (respecto a la BKS determinista), *gap determinista*,
 *pérdida por incertidumbre* (las dos sobre la BKS, y se suman), *días* (réplicas de la simulación),
@@ -17,7 +17,7 @@ Términos que usamos igual que el artículo: *gap* (respecto a la BKS determinis
 
 ## 1. Portada — *A simheuristic for the team orienteering problem with stochastic travel times*
 
-*(~30 s)*
+*(~40 s)*
 
 Buenos días. Presentamos la práctica de simheurísticas: el *Team Orienteering Problem* con tiempos de
 viaje aleatorios.
@@ -42,8 +42,10 @@ una vez y cada ruta tiene un límite tmax. Lo nuevo es que **el tiempo de cada a
 esperada**, que hay que estimar simulando.
 
 El ejemplo: un vehículo y tmax = 10. La ruta A tarda 9,8 de media y da 30; la B tarda 8 y da 25. En
-determinista gana A. Pero si A llega tarde, digamos, el 45 % de los días, vale unos 16,5, menos que B.
-El 45 % es un supuesto para el ejemplo. **Con incertidumbre, la holgura compensa.**
+determinista gana A. Con incertidumbre media, c = 0,25, y el modelo de la diapositiva 3, A llega tarde
+el 42 % de los días y vale unos 17,5; B llega tarde solo el 9 % y vale unos 22,8. Son cifras simuladas
+con 400 000 días. **Con incertidumbre, la holgura compensa.** (Con c = 0,75 gana también B: 17,5 frente a
+20,4.)
 
 ---
 
@@ -62,11 +64,13 @@ Usamos p1, p2 y p3, los únicos conjuntos de menos de 35 nodos. Son 141 instanci
 entre 3,8 y 55. Con tres niveles salen 423 casos, y con tres α, **1 269 ejecuciones**. La referencia es
 la mejor solución conocida determinista, la BKS, de Dang et al. (2013).
 
+Los escenarios se generan al vuelo con una semilla fija: no se guardan y `data/` no cambia.
+
 ---
 
 ## 4. *Same c, very different uncertainty*
 
-*(~45 s)*
+*(~1 min)*
 
 Dos propiedades del modelo que explican los resultados.
 
@@ -84,7 +88,7 @@ Dos propiedades del modelo que explican los resultados.
 
 ## 5. *The simheuristic: one run per (instance, c, α)*
 
-*(~1 min 45 s)*
+*(~1 min 30 s)*
 
 Una ejecución tiene dos fases.
 
@@ -126,7 +130,7 @@ salen tres generadores independientes.
 
 ## 7. *Common days to compare, new days to measure*
 
-*(~1 min 45 s)*
+*(~1 min 30 s)*
 
 **Días comunes para comparar.** La simulación rápida tiene que **ordenar** 7 candidatas con solo 200
 réplicas. Con números aleatorios comunes, la diferencia entre dos candidatas viene de sus rutas y no de
@@ -147,9 +151,9 @@ parecidas es despreciable. Quitarlo exigiría una tercera simulación de la gana
 
 ## 8. *Two parameters from the paper, the rest ours*
 
-*(~30 s)*
+*(~45 s)*
 
-El paper describe la simheurística en un párrafo y sin valores. Solo salen de él los niveles de c y las
+El paper describe la simheurística en unos pocos párrafos cortos y sin valores. Solo salen de él los niveles de c y las
 réplicas, 200 y 1000. Todo lo demás es nuestro, y la tercera columna da el motivo de cada decisión. Al
 pie, un matiz: la candidata greedy asegura que la mejor candidata determinista no es peor que PJS con
 búsqueda local, pero no la solución final, que la elige la simulación.
@@ -182,7 +186,7 @@ calcula el gap.
 - **El orden es el mismo,** L < M < H.
 - **Nuestras medianas quedan entre 7 y 9 puntos por encima:** 15,69, 26,02 y 31,56 %, frente a unos 7,
   17 y 24 %. En L y M, nuestro primer cuartil está más o menos en su tercero.
-- **No viene de la construcción:** nuestro gap determinista es de solo 2,4–3,2 puntos.
+- **No viene principalmente de la construcción:** nuestro gap determinista es de solo 2,4–3,2 puntos.
 
 **Una causa plausible, que no podemos comprobar sin su código:** Juan et al. simulan dentro del bucle
 de búsqueda y paran por tiempo, con ejecuciones de hasta unos 400 s, así que la simulación puede
@@ -191,7 +195,7 @@ esperados.
 
 ---
 
-## 11. *Most of the gap is the price of uncertainty*
+## 11. *Most of the gap is lost to uncertainty*
 
 *(~1 min 30 s)*
 
@@ -212,7 +216,7 @@ sale 11,86, 22,72 y 28,79 %. Parte de esa pérdida no la evita ninguna solución
 
 ---
 
-## 12. *Why: candidates are built up to tmax*
+## 12. *Likely cause: candidates are built up to tmax*
 
 *(~1 min 15 s)*
 
@@ -248,7 +252,7 @@ una observación, no como una explicación.**
 
 ## 14. *Fast enough: 1 269 runs in about 25 seconds*
 
-*(~45 s)*
+*(~1 min)*
 
 Una ejecución tarda entre 0,05 y 0,23 s (de media 0,07 s en p2 y 0,16–0,17 s en p1 y p3). Las 1 269
 ejecuciones tardan unos 25 s en **12 hilos de un AMD Ryzen 5 5500U de 6 núcleos**. Lo pesado son núcleos
@@ -278,7 +282,8 @@ barato, probamos todos los α en todos los niveles en lugar de ajustar uno.
    c;
 3. un margen **adaptativo**, ajustado a la tasa de fallos de la simulación rápida.
 
-Lo motiva que entre el 13 y el 29 % de las rutas ganadoras llegan tarde, y más cuanto mayor es c.
+Lo motiva que, de media, entre el 13 y el 29 % de las rutas ganadoras llegan tarde en un día simulado, y más
+cuanto mayor es c.
 
 ---
 
@@ -291,7 +296,7 @@ días comunes para ordenar y días nuevos para medir.
 
 - Da el orden L < M < H de Juan et al., con gaps medios de 14,65, 25,02 y 30,51 %. Nuestras medianas
   quedan 7–9 puntos por encima de las suyas, leídas a ojo.
-- Las ganadoras suelen alcanzar la BKS en determinista, pero la ruta mediana llena 0,93 tmax y, de
+- Más o menos la mitad de las ganadoras (51–58 %, 72, 72 y 82 de 141) alcanza la BKS en determinista, pero la ruta mediana llena 0,93 tmax y, de
   media, entre el 13 y el 29 % de las rutas llegan tarde en un día simulado.
 - Una ejecución tarda una fracción de segundo, y α apenas importa.
 

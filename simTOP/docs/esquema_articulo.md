@@ -43,7 +43,7 @@ futuro y §6.1 hacen de enunciado.
 | 4 Implementation | ~0.4 pág. | ≈ 280 |
 | 5 Computational results | ~1 pág. con tabla y figura | ≈ 580 |
 | 6 Conclusions | ~0.15 pág. | ≈ 125 |
-| **Total prosa** | 1 700–1 950 | **2 267** en r3 (2 266 en r2, 2 208 en r1; el revisor acepta el exceso) |
+| **Total prosa** | 1 700–1 950 | **≈ 2 280** en r4 (2 267 en r3, 2 266 en r2, 2 208 en r1; el revisor acepta el exceso) |
 
 ## Mensajes clave
 
@@ -60,6 +60,8 @@ futuro y §6.1 hacen de enunciado.
 7. Trabajo futuro: margen de seguridad (rejilla, a partir de la varianza, adaptativo).
 
 ## Cifras y fuentes
+
+Los scripts citados en `ignore/paper_loop/tmp/` son notas locales: no se suben (la carpeta `ignore/` está en `.gitignore`).
 
 | Cifra en el artículo | Valor | Fuente |
 |---|---|---|
@@ -86,7 +88,7 @@ futuro y §6.1 hacen de enunciado.
 | Ganancia del mejor α sobre cada α fijo | 1.3–2.2 puntos (L 1.64–2.21, M 1.81–1.90, H 1.27–1.46) | medias de `gap_alpha_c_matrix.csv` menos medias de `gap_best_by_level.csv` |
 | «≈ 80 % del gap en L, 90 % en M y H» | 78.5 / 88.2 / 92.1 % | pérdida sobre la BKS / gap (lossbks.py) |
 | Rutas que fallan (media) | 12.73 / 23.57 / 29.45 % | `results/fail_rate_by_level.csv` |
-| Ganadoras con gap determinista 0 | 72 / 72 / 82 de 141 | `results/best.csv`, `det_gap_pct == 0` por nivel (stats.py) |
+| Ganadoras con gap determinista 0 («about half», 51–58 %, conclusiones desde r4) | 72 / 72 / 82 de 141 (51.1 / 51.1 / 58.2 %) | `results/best.csv`, `det_gap_pct == 0` por nivel (stats.py) |
 | Holgura de las rutas ganadoras | mediana 0.928 / 0.927 / 0.932 tmax; 3.8 / 6.1 / 8.4 % a < 1 % de tmax | `results/route_slack_by_level.csv` |
 | Menos de 7 candidatas distintas / solo una | 27.1 % / 9.0 % de 1 269 | `results/runs.csv`, `n_distinct` (stats.py) |
 | Ganadora = greedy | 13.2 % de 423 | `best.csv`; salida guardada de `analysis.ipynb` celda 19 |
@@ -122,17 +124,20 @@ futuro y §6.1 hacen de enunciado.
 3. Panadero et al. 2021, *Appl. Sci.* 11(24):12092 — primera página de `TOP/docs/applsci-11-12092-v2.pdf`
    (volumen 11, artículo 12092; el número 24 sale del DOI `app112412092` y del artículo de TOP).
 4. Grasas et al. 2017, *Comput. Ind. Eng.* 110:216–228 — lista de referencias del PDF de Juan et al.
-5. Dang, Guibadj, Moukrim 2013, EJOR 229:332–344 — **no comprobada contra PDF** (no está en `docs/`);
-   copiada del artículo de TOP, que la usa como fuente de `bks_chao.csv` (`TOP/README.md`).
+5. Dang, Guibadj, Moukrim 2013, EJOR 229:332–344 — no está en `docs/`; copiada del artículo de TOP, que
+   la usa como fuente de `bks_chao.csv` (`TOP/README.md`). La revisión final confirma vol. 229, n.º 2,
+   pp. 332–344: cerrada.
 
 ## Pendiente
 
-- **Prosa 2 208 palabras**, por encima del rango de la guía (1 700–1 950), aunque el PDF cumple las 3
+- **Prosa ≈ 2 280 palabras (r4)**, por encima del rango de la guía (1 700–1 950), aunque el PDF cumple las 3
   páginas (márgenes superior e inferior de 1.8 cm, dentro de la holgura de la guía). El exceso viene de
   los requisitos del usuario (§11 puntos 1–9, §6.1, trabajo futuro). Si hay que recortar, candidatos: el
   párrafo de la greedy (§3), los valores de la matriz α y la frase del CV de un arco.
 - **Equipo**: resuelto en r2 (Ryzen 5 5500U, 6 núcleos / 12 hilos, confirmado por el orquestador).
-- **Dang et al. 2013**: datos bibliográficos sin comprobar contra el PDF.
+- **Dang et al. 2013**: cerrada en r4 (confirmada por la revisión final).
+- **Ejemplo de nombre (r4)**: `p1.2.a` es una de las seis instancias excluidas; el artículo usa `p1.2.b` y
+  dice que la letra ordena tmax dentro del grupo (comprobado por la revisión final en los 9 grupos).
 - **Discrepancia menor de fuentes**: el artículo de TOP cita para Chao et al. (1996) otro trabajo (*A fast
   and effective heuristic for the orienteering problem*, EJOR 88:475–489); aquí se cita *The team
   orienteering problem* (88(3):464–474), que es el que cita Juan et al. No afecta a simTOP.

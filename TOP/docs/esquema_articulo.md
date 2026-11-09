@@ -104,13 +104,13 @@ Enunciado: `docs/homework.png` (diapositiva *Homework / Lab Activities*). No pid
 - Panadero et al. (2021), *Appl. Sci.* 11(24):12092 — primera página de `docs/applsci-11-12092-v2.pdf`.
 - Li et al. (2022), *Mathematics* 10(6):982 — primera página de `docs/mathematics-10-00982-v2.pdf` y diapositiva del enunciado.
 - Clarke y Wright (1964), *Oper. Res.* 12(4):568–581 — ref. 56 de Panadero y artículo de VRP.
-- Chao, Golden y Wasil (1996), *EJOR* 88:475–489 — ref. 39 de Panadero (ver *Pendiente*).
+- Chao, Golden y Wasil (1996), «The team orienteering problem», *EJOR* 88(3):464–474 — lista de referencias de Juan et al. (2019), `simTOP/docs/SIMULATION-BASED OPTIMIZATION IN TRANSPORTATION AND LOGISTICS.pdf` (corregido el 08-11-2026; antes se citaba «A fast and effective heuristic for the orienteering problem», *EJOR* 88:475–489, ref. 39 de Panadero, que es el artículo del OP).
 - Dang, Guibadj y Moukrim (2013), *EJOR* 229:332–344 — ref. 49 de Panadero (PSOiA, fuente del BKS).
 
 ## Pendiente
 
 1. ~~**Python frente a Rust**~~ (resuelto el 02-11-2026, `preguntas_abiertas.md`, pregunta 1): el artículo sigue diciendo que el enunciado pide Python y que el código es Rust; la frase de la comprobación en Python se ha quitado porque no hay código ni salida en el repositorio.
-2. **Referencia de Chao:** Panadero cita como fuente del benchmark «A fast and effective heuristic for the orienteering problem» (EJOR 88:475–489), que es el artículo del OP; el del TOP (*The team orienteering problem*) no está en ningún PDF de `docs/`. Se cita como lo da Panadero; decidir si se cambia.
+2. ~~**Referencia de Chao**~~ (resuelto el 08-11-2026: el artículo cita ya *The team orienteering problem*, EJOR 88(3):464–474, comprobado en las referencias de Juan et al. (2019), PDF en `simTOP/docs/`). Nota original: Panadero cita como fuente del benchmark «A fast and effective heuristic for the orienteering problem» (EJOR 88:475–489), que es el artículo del OP; el del TOP (*The team orienteering problem*) no está en ningún PDF de `docs/`. Se cita como lo da Panadero; decidir si se cambia.
 3. **Tiempo de la rejilla:** 127 s en `informe_alpha.md` (tareas de construcción), ~140 s en la presentación y `comparacion_bks_conjuntos.md`, ~2 min 10 s en total según el scratchpad. El artículo usa 127 s + 0.4 s.
 4. **Élite:** el scratchpad dice 125 490 / 18 791; el informe generado, 110 496 / 18 757. Se usa el informe.
 5. **GRASP sin LS:** el scratchpad da 169 571 (+7.41 %, solo geométrica); el informe de búsqueda local, 170 469 (+7.98 %, cualquier aleatorización). Se usa 170 469.

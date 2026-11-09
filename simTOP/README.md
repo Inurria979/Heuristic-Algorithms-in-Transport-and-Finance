@@ -18,8 +18,8 @@ implemented (commercial solver).
 * **Instances.** The 141 feasible instances of sets p1, p2 and p3 (fewer than 35 nodes, `tmax` from
   3.8 to 55) of Chao et al. (1996) in [`data/top-data/`](data/top-data/), unmodified (the six p1
   instances without any reachable customer are left out). Scenarios are drawn on the fly with a fixed
-  seed, never stored. [`data/bks_chao.csv`](data/bks_chao.csv) is the deterministic best known solution
-  (copied from `../TOP/data/`), used for the gap.
+  seed, never stored. [`data/bks_chao.csv`](data/bks_chao.csv) holds the best known solutions of the Chao
+  instances (PSOiA, Dang, Guibadj and Moukrim, 2013; copied from `../TOP/data/`), used for the gap.
 
 ## Method
 
@@ -47,6 +47,7 @@ numbers are drawn with numpy, so results do not depend on Numba's generator.
 | `α` | 0.25, 0.5, 0.75 (all three run) | our choice (the paper gives none) |
 | Biased randomisation | geometric, β = 0.3 | our choice (as in `TOP/`; the paper cites Grasas et al. 2017) |
 | Iterations | 50 biased constructions + 1 greedy per run | our choice (the paper stops by time) |
+| Use of simulation | one filter after the search (7 → 3) | our choice (the paper simulates inside the search loop and updates the base and best solutions with the simulated value) |
 | Filter 7 → 3 | 7 by deterministic reward, 3 by fast mean | our choice |
 | Local search | 2-opt + insertion of `TOP/` | our choice (the paper: destruction–reconstruction + 2-opt) |
 | Random numbers | common in the fast simulation, fresh in the intensive one | our choice |
@@ -67,7 +68,7 @@ column of `runs.csv` holds that list.
 | [`src/run_experiment.py`](src/run_experiment.py) | The 1 269 runs; writes `results/runs.csv` and `results/best.csv` |
 | [`src/analysis.ipynb`](src/analysis.ipynb) | Tables and figures of the results (reads `../results/`) |
 | [`data/`](data/) | All 387 Chao instances (only p1–p3 are used) and `bks_chao.csv` |
-| [`docs/`](docs/) | Paper, specification (`explicacion_paper.md`) and open questions |
+| [`docs/`](docs/) | Paper, specification (`explicacion_paper.md`), open questions, the 3-page article (`.tex` + PDF), the presentation (`.pptx` + PDF) and the scripts of both |
 | [`results/`](results/) | `runs.csv`, `best.csv`, summary CSVs, `figures/` |
 | `ignore/` (git-ignored) | Review reports and scratch files |
 
@@ -116,7 +117,7 @@ points; [`results/gap_best_by_level.csv`](results/gap_best_by_level.csv)):
 | M | 26.02 (20.04–31.97) | ≈ 17 (9–20) |
 | H | 31.56 (26.35–36.44) | ≈ 24 (19–28) |
 
-Our medians are 7–9 points above the paper's, with the same ordering L < M < H. The largest gap of the
+Our medians are 7–9 points above the paper's, with the same ordering L < M < H. A plausible cause is that the paper simulates inside the search loop (and stops by time, up to about 400 s in its Fig. 4): the simulated value updates the base and the best solution, so the search can move towards routes with slack, whereas we simulate only 7 candidates chosen with expected times; we cannot check it without their code. The largest gap of the
 best α is 42.7 % (p1.2.k, `c = 0.75`); none exceeds 50 %.
 
 **Decomposition of the gap** (best α, mean %, [`results/gap_decomposition_by_level.csv`](results/gap_decomposition_by_level.csv)):
@@ -128,10 +129,11 @@ best α is 42.7 % (p1.2.k, `c = 0.75`); none exceeds 50 %.
 | H | 30.51 | 2.41 (median 0) | 28.10 | 28.79 | 29.45 |
 
 The split is additive over the BKS: gap = deterministic gap + loss over the BKS, with the loss over the BKS
-`100 (det − R̄) / BKS` (per run, then averaged); `uncert_loss_pct` in `runs.csv` is the same loss over the
-deterministic reward, `100 (1 − R̄ / det)`.
+`100 (det − R̄) / BKS` (per run, then averaged); `loss_bks_pct` in `gap_decomposition_by_level.csv` is its mean and median. `uncert_loss_pct` in `runs.csv` is the same loss over the
+deterministic reward, `100 (1 − R̄ / det)`. The winner reaches the BKS in deterministic terms (deterministic gap 0) in 72 / 72 / 82 of the 141 cases for L / M / H, and in 27.1 % of the 1 269 runs fewer than 7 distinct candidates survive (9.0 % only one)
+([`results/winners_and_diversity_by_level.csv`](results/winners_and_diversity_by_level.csv)).
 
-Most of the gap is the price of the uncertainty (about 80 % at L and 90 % at M and H). A likely
+Most of the gap is lost to uncertainty (about 80 % at L and 90 % at M and H). A likely
 reason is that construction and local search build routes close to `tmax` (median expected time of the
 winners' routes: 0.93 `tmax` at every level; 4 / 6 / 8 % of them within 1 % of `tmax`,
 [`results/route_slack_by_level.csv`](results/route_slack_by_level.csv)) and the deterministic filter keeps
@@ -142,10 +144,10 @@ half of the time. The winner is the greedy candidate in 13.2 % of the best-α ro
 **By set and `tmax`** (mean gap of the best α, L / M / H,
 [`results/gap_by_set_level.csv`](results/gap_by_set_level.csv)): p1 18.38 / 29.37 / 33.87, p2 10.36 /
 19.33 / 25.19, p3 14.02 / 24.68 / 30.75. With `Var = c · t` a short route is relatively more variable, yet
-the gap tends to grow with `tmax` (Spearman correlation 0.49 / 0.56 / 0.67 for L / M / H) and p2, with the
+the gap tends to grow with `tmax` (Spearman correlation 0.49 / 0.56 / 0.67 for L / M / H, [`results/spearman_tmax_by_level.csv`](results/spearman_tmax_by_level.csv)) and p2, with the
 smallest `tmax` (median 10.0 against 17.5 in p1 and 20.6 in p3), has the lowest gap. Part of the trend is
-already in the deterministic gap, which also grows with `tmax` (Spearman 0.56 / 0.54 / 0.59), and so does
-the loss due to uncertainty over the deterministic reward (0.33 / 0.44 / 0.52), so it is not only the uncertainty.
+already in the deterministic gap, which also grows with `tmax` (Spearman 0.56 / 0.54 / 0.59), more than
+the loss due to uncertainty over the BKS (0.30 / 0.39 / 0.44; over the deterministic reward 0.33 / 0.44 / 0.52), so it is not only the uncertainty.
 Set and `tmax` are confounded (p2 also has 21 nodes).
 
 **Time per run** (mean, [`results/time_by_set_level.csv`](results/time_by_set_level.csv)): 0.16 s in p1,
@@ -158,8 +160,8 @@ stop, so only a qualitative comparison makes sense.
 * The SAA with CPLEX is not implemented, so there is no comparison against it, only against the
   SimHeu boxes read by eye from Fig. 3; the paper does not say which instances each box covers nor how the
   gap is computed.
-* The gap against the deterministic BKS mixes the loss of the heuristic and the price of the uncertainty, which
-  no solution can avoid; the decomposition above separates them.
+* The gap against the deterministic BKS mixes the loss of the heuristic and the loss of the winner to late routes;
+  only part of the latter is unavoidable (even the best stochastic solution has a gap > 0); the decomposition above separates them.
 * Routes built close to `tmax` (see above). **Future work:** a safety margin, building and improving with
   `t'_max = t_max − δ` (fixed grid, `E_r + z √(c E_r) ≤ t_max` from the variance, or adaptive from the failure
   rate of the fast simulation) while the simulation keeps the true `tmax`.

@@ -1,10 +1,10 @@
 # simTOP — explicación del paper y especificación para implementarlo
 
-> Nota interna (v4, 08-11-2026). Escrita por `lector-papers` a partir del paper y de la
+> Nota interna (v5, 09-11-2026). Escrita por `lector-papers` a partir del paper y de la
 > conversación con el usuario. Convención: **[paper p. X]** = lo dice el paper (página impresa de
 > las actas; la página del PDF es la impresa − 1905); **[deducción]** = lo deduzco yo;
 > **[usuario]** = lo ha decidido el usuario; **[TOP]** = se toma del código ya hecho en `TOP/`.
-> Estado: **listo para implementar** (v4). Lo que es propuesta y no decisión está marcado en §11.
+> Estado: **listo para implementar** (v5). Lo que es propuesta y no decisión está marcado en §11.
 
 ---
 
@@ -399,6 +399,7 @@ El paper no da tablas, solo dos diagramas de caja:
 6. Descomposición del gap (§11, artículo punto 8): gap determinista de la ganadora,
    $100\,(\text{BKS}-\text{det\_reward})/\text{BKS}$, y pérdida por incertidumbre,
    $100\,(1-\text{exp\_reward}/\text{det\_reward})$. Se calculan desde `runs.csv`.
+   [usuario, 08-11-2026] En el artículo, README y presentación la descomposición es aditiva sobre la BKS: gap = det_gap + loss_BKS, con loss_BKS = 100(det_reward − exp_reward)/BKS; la pérdida relativa a det_reward (`uncert_loss_pct`) solo se cita con su denominador explícito.
 
 ## 10. Guía de implementación
 
@@ -546,6 +547,7 @@ resultados (% de rutas fallidas y pérdida por incertidumbre al crecer $c$).
    **precio de la incertidumbre**, que ninguna solución puede evitar (incluso la óptima estocástica
    tiene gap > 0). Conviene separarlos: gap determinista de la ganadora frente a pérdida por
    simulación ($1-\bar R/\text{det\_reward}$). Ambas cosas salen de `runs.csv`.
+   [usuario, 08-11-2026] En el artículo, README y presentación la descomposición es aditiva sobre la BKS: gap = det_gap + loss_BKS, con loss_BKS = 100(det_reward − exp_reward)/BKS; la pérdida relativa a det_reward (`uncert_loss_pct`) solo se cita con su denominador explícito.
 9. **Rutas al límite de $t_{max}$ (§11, «Cosas que chirrían», punto 7)**: construcción, búsqueda local
    y filtro determinista empujan hacia rutas que apuran $t_{max}$. Es el comportamiento esperado y los
    resultados deben mostrarlo. Como **trabajo futuro** se propone un margen de seguridad y una forma

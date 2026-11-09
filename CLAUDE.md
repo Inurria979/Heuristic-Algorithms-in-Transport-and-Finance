@@ -19,7 +19,7 @@ proyectos; lo de un solo proyecto va en su `docs/` (p. ej. `TOP/docs/scratchpad.
 | `TOP/` | Team Orienteering, heurística PJS + GRASP + búsqueda local, en Rust (387 instancias de Chao) | Código, artículo y presentación terminados |
 | `GRASP/` | GRASP con ahorros y aleatorización sesgada para el TSP (10 instancias TSPLIB) | Código, artículo y presentación terminados |
 | `PFSP/` | Permutation Flow-Shop, NEH / RandNEH / ILS-ESP con β adaptativo (5 instancias de Taillard) | Código, artículo y presentación terminados; faltan las instancias en `data/` |
-| `simTOP/` | TOP con tiempos de viaje estocásticos: simheurística (PJS + BR + búsqueda local + simulación Monte Carlo) del paper de Juan et al. (2019), 141 instancias de p1–p3 (Numba) | Código y resultados terminados; falta artículo |
+| `simTOP/` | TOP con tiempos de viaje estocásticos: simheurística (PJS + BR + búsqueda local + simulación Monte Carlo) del paper de Juan et al. (2019), 141 instancias de p1–p3 (Numba) | Código, artículo y presentación terminados |
 
 ## Estructura obligatoria de cada subproyecto
 

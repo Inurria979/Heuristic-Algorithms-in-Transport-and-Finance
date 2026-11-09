@@ -235,3 +235,18 @@ le gustó que TOP se hiciera en Rust: no es un problema.
    artículo.
 7. TOP: lo que queda de [`TOP/docs/scratchpad.md`](TOP/docs/scratchpad.md) §pendiente
    (tamaño de `results/`, unos 130 MB).
+
+## 5. simTOP y bucle de código completo (08–09-11-2026)
+
+- `/orquestar simTOP` probó por primera vez el bucle de código de principio a fin, y funcionó:
+  - `nucleo`: APROBADO en r1;
+  - `experimento`: APROBADO en r3;
+  - `readme`: APROBADO en r2;
+  - artículo: APROBADO en r3 y otra vez en r4, tras la revisión final;
+  - presentación: v1 → v3.
+
+  El plan está en `simTOP/ignore/orquestador/plan.md`.
+- Agente nuevo `revisor-final` (Opus, esfuerzo xhigh). Revisa al final todo el conjunto: paper original, especificación, código, resultados, README, artículo y presentación. En simTOP encontró 0 B, 6 I y 15 M, ya corregidos.
+- Regla de nombres: las prácticas de simulación empiezan por `sim`, seguido del problema en mayúsculas (`simTOP`). Está recogida en la sección Git de `CLAUDE.md`.
+- **TOP:** la cita de Chao et al. (1996) estaba mal; era el paper del OP, con páginas 475–489. Corregida a «The team orienteering problem», EJOR 88(3):464–474, en el `.tex`, el PDF (sigue en 3 páginas) y `esquema_articulo.md`. El artículo de TOP ya estaba entregado.
+- Aviso: `tectonic` no abre el `.out` de hyperref cuando el nombre del `.tex` lleva espacios. Para compilar, copia el `.tex` a un nombre sin espacios.

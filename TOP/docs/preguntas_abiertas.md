@@ -18,7 +18,10 @@ Se cita como la da Panadero (ref. 39: «A fast and effective heuristic for the o
 problem», EJOR 88:475–489), que es el artículo del OP. El de las instancias del TOP no está en
 ningún PDF de `docs/`. ¿Añadís el PDF o la referencia correcta? El revisor (de memoria) cree que es *The team orienteering problem*, EJOR 88(3):464–474, 1996.
 
-**Respuesta:**
+**Respuesta:** Confirmado con la lista de referencias de Juan et al. (2019), en
+`simTOP/docs/`: Chao, Golden y Wasil (1996), «The team orienteering problem», EJOR
+88(3):464–474. Corregido en el `.tex`, en el PDF (sigue en 3 páginas) y en `esquema_articulo.md`
+el 08-11-2026, a raíz de la revisión final de simTOP.
 
 ## 3. Tiempo de la rejilla
 
